@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 @serializable
 trait Mapper[T, U] {
-  /** Typically named `flatMap` but we're trying to be faithful 
+  /** Typically named `flatMap` but we're trying to be faithful
    *  to map-reduce naming conventions.
    */
   def map(t: T): Seq[U]
@@ -18,9 +18,9 @@ trait Reducer[T] {
 @serializable
 trait MapReduce[T, U] extends Mapper[T, U] with Reducer[U]
 
-/** A remoting key-value store exposing map-reduce push-down processing */  
+/** A remoting key-value store exposing map-reduce push-down processing */
 trait SlapChop {
-  def apply[T](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]): T  
+  def apply[T](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]): T
 }
 
 
@@ -36,9 +36,9 @@ S3 format:
 
 root = bucket:base/path/
   versions => contains known versions + metadata
-  
+
   files stored in hex-encoded hierarchy
-  
+
   bucket:base/path/12345/
 */
 

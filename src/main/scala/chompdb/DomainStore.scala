@@ -24,7 +24,7 @@ object VersionedStore {
 
 trait VersionedStore {
   import VersionedStore._
-  
+
   val fs: FileSystem
 
   val root: fs.Dir
@@ -32,19 +32,19 @@ trait VersionedStore {
   def versionPath(version: Long) = root /+ version.toString
 
   def mostRecentVersionPath = mostRecentVersion map versionPath
-  
+
   def mostRecentVersion: Option[Long] = versions.headOption
-  
+
   def createVersion(version: Long = System.currentTimeMillis): fs.Dir = {
     if (versions contains version) throw new RuntimeException("Version already exists")
-    
+
     val path = versionPath(version)
-    
+
     path.deleteRecursively() // in case there's an incomplete version already
-    
+
     path
   }
-  
+
   def deleteVersion(version: Long) {
     versionPath(version).deleteRecursively()
     tokenPath(version).delete()
@@ -87,7 +87,7 @@ trait VersionedStore {
       try Some(p.filename.toLong) catch { case e: Exception => None }
     }
   }
-  
+
   /*
     private long validateAndGetVersion(String path) {
         if(!normalizePath(path).getParent().equals(normalizePath(root))) {

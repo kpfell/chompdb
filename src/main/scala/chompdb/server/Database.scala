@@ -10,7 +10,7 @@ object Database {
 
 trait Database {
   import Database._
-  
+
   val fs: FileSystem
 
   def root: fs.Path
@@ -30,19 +30,19 @@ trait Database {
 
   /** Returns true if all of the supplied `domains` are fully loaded. */
   def fullyLoaded(domains: Iterable[String]): Boolean
-  
+
   /** Returns true if any of the supplied `domains` are loading. */
   def someLoading(domains: Iterable[String]): Boolean
 
   /** Returns the status of all domains */
   def status: Map[String, DomainStatus]
-  
+
   /** "Walks through the supplied local directory, recursively deleting
    *  all directories with names that aren't present in the supplied
    * `domains`."
    */
   def purgeUnusedDomains(): Unit
-  
+
   def launchUpdater(): Unit
 }
 
@@ -53,11 +53,11 @@ trait DatabaseManager {
 
 /*
  * options:
- * 
+ *
  *   replication -> 3
- *   
+ *
  *   domains
- *     "foo" ->  
+ *     "foo" ->
  *       remoteStore -> ...
  *       localStore  -> ...
  *       serializer  -> ...
@@ -69,5 +69,5 @@ trait DatabaseManager {
  *          version -> 123456789
  *          shards ->
  *              1  -> ..
- *                       
+ *
  */

@@ -16,20 +16,20 @@ object Domain {
 
 trait Domain {
   import Domain._
-  
+
   def domainData: Map[Version, ShardSet]
   def domainShards: ShardSet
-  
+
   /** Returns current version being served. */
   def currentVersion: Version
-  
+
   /** Returns the latest version. */
   def latestVersion: Version
-  
+
   def versions: Set[Version]
-  
+
   def loaded(version: Version): Boolean
-  
+
   /** Return true if remote versioned store contains newer data than local store. */
   def needsUpdate: Boolean
 }

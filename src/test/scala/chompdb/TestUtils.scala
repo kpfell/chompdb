@@ -6,7 +6,7 @@ object TestUtils {
 
 trait TempRoot {
   val rootName: String
-  
+
   val fs = new LocalFileSystem()
 
   // create and return empty test directory under java.io.tmpdir
@@ -18,5 +18,5 @@ trait TempRoot {
     tmp.mkdir()
     tmp
   }
-  
+
 }
