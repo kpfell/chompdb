@@ -31,7 +31,7 @@ class FileSystemWriterTest extends WordSpec with ShouldMatchers {
     }
     
     "write values" in {
-      val writer = new FileSystemWriter with TempRoot{
+      val writer = new FileSystemWriter with TempRoot {
         override val rootName = "FileSystemWriterTest"
         override val shardsIndex = 1
         override val shardsTotal = 1
@@ -45,14 +45,30 @@ class FileSystemWriterTest extends WordSpec with ShouldMatchers {
       }
     }
 
-    "not leak file descriptors" in {
-      val writer = new FileSystemWriter with TempRoot{
+    // currently ignored because too long (approx 20 secs)
+    "not leak file descriptors" ignore {
+      val writer = new FileSystemWriter with TempRoot {
         override val rootName = "FileSystemWriterTest"
         override val shardsIndex = 1
         override val shardsTotal = 1
       }
       
       for (i <- 1 to 99999) {
+        val id = writer.put("hello-" + i)
+        id should be === i
+        
+        writer.fileForId(id).readAsString() should be === ("hello-" + i)
+      }
+    }
+    
+    "write for different shards (and increment ids accordingly)" in {
+      val writer = new FileSystemWriter with TempRoot {
+        override val rootName = "FileSystemWriterTest"
+        override val shardsIndex = 2
+        override val shardsTotal = 3
+      }
+      
+      for (i <- 2 to 99 by 3) {
         val id = writer.put("hello-" + i)
         id should be === i
         
