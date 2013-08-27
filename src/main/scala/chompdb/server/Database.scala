@@ -1,6 +1,7 @@
 package chompdb.server
 
 import chompdb._
+import f1lesystem.FileSystem
 import scala.concurrent.Future
 
 object Database {

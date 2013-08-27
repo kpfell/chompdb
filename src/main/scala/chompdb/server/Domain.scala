@@ -1,6 +1,7 @@
 package chompdb.server
 
 import chompdb._
+import f1lesystem.FileSystem
 
 trait DomainManager {
   def apply(fs: FileSystem, root: FileSystem#Path): Option[DomainStore]

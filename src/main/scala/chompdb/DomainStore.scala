@@ -1,5 +1,7 @@
 package chompdb
 
+import f1lesystem.FileSystem
+
 trait ShardSet
 
 class ShardSetImpl(root: FileSystem#Path, domain: DomainInfo)
@@ -7,8 +9,8 @@ class ShardSetImpl(root: FileSystem#Path, domain: DomainInfo)
 trait WithDomainInfo extends DomainInfo {
   val info: DomainInfo
   override val numShards = info.numShards
-  override val store = info.store
-  override val shardingScheme = info.shardingScheme
+  // override val store = info.store
+  // override val shardingScheme = info.shardingScheme
 }
 
 

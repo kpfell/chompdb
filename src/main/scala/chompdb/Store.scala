@@ -1,54 +1,37 @@
 package chompdb
 
+import f1lesystem.FileSystem
 import java.nio.ByteBuffer
-
-trait Store {
-}
-
-object KV {
-  trait Reader {
-    def get(key: Long): Option[ByteBuffer]
-  }
-
-  trait Writer {
-    def put(value: ByteBuffer): Long
-  }
-}
-
 import java.util.concurrent.atomic.AtomicLong
 
-object FileSystemWriter {
+object Store {
+  trait Reader extends java.io.Closeable {
+    def get(key: Long): Option[Array[Byte]]
+  }
+
+  trait Writer extends java.io.Closeable {
+    def put(value: Array[Byte]): Long
+  }
 }
 
-trait FileSystemWriter extends KV.Writer {
+trait Splits {
+  val splitIndex: Int
+  val splitFactor: Int
+}
 
-  val fs: FileSystem
-
-  val root: fs.Dir
-
+trait Sharded {
   val shardsIndex: Int
-
   val shardsTotal: Int
-
-  def lastId = nextId.get() - 1
-
-  private[chompdb] final lazy val nextId = new AtomicLong(shardsIndex)
-
-  override def put(value: ByteBuffer): Long = {
-    val id = nextId.getAndAdd(shardsTotal)
-    val file = fileForId(id)
-    file.parent.mkdir()
-    file.write(value)
-    id
+  
+  def split(index: Int, splits: Int) = new Sharded {
+    val shardsIndex = (Sharded.this.shardsIndex * splits) + index
+    val shardsTotal = (Sharded.this.shardsTotal * splits)
+    override def toString = s"SplitSharded(shardsIndex=$shardsIndex, shardsTotal=$shardsTotal"
   }
+}
 
-  private[chompdb] def fileForId(id: Long): fs.File = {
-    val hex = java.lang.Long.toHexString(id)
-    val padded = if (hex.length % 2 == 1) '0' + hex else hex
-    val groups =  (padded grouped 2).toSeq
-    val subDirs = groups dropRight 1
-    val filename = groups.last
-    val dir = (root /: subDirs) { (parent, subDir) => parent /+ ('D' + subDir) }
-    dir / filename
-  }
+private[chompdb] class NextId(val shards: Sharded) {
+  private[this] final val id = new AtomicLong(shards.shardsIndex)
+  def lastId = id.get - shards.shardsTotal
+  def nextId() = id.getAndAdd(shards.shardsTotal)
 }

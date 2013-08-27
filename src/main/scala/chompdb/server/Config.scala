@@ -1,7 +1,7 @@
 package chompdb.server
 
 import chompdb.DomainInfo
-import chompdb.FileSystem
+import f1lesystem.FileSystem
 
 trait Config {
   val domain: DomainInfo
