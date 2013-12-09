@@ -22,7 +22,8 @@ trait SpillingStore extends Store.Writer {
   def newWriter = {
     val number = spills.incrementAndGet()
     new FileStore.Writer {
-      override val baseDir 
+      val baseFile: f1lesystem.FileSystem#File = ???      
+      val shards: chompdb.sharding.Sharded = ??? 
     }
   }
   def put(value: Array[Byte]): Long
