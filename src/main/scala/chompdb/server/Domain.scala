@@ -3,8 +3,9 @@ package chompdb.server
 import chompdb._
 import f1lesystem.FileSystem
 
-trait DomainManager {
-  def apply(fs: FileSystem, root: FileSystem#Path): Option[DomainStore]
+/*
+trait ChompManager {
+  def apply(fs: FileSystem, root: FileSystem#Path): Option[Store]
   def createLocal(localRoot: String): DomainStore
   def createFromRemote(fs: FileSystem, root: FileSystem#Path): DomainStore
   def create(info: DomainInfo): DomainStore
@@ -34,3 +35,5 @@ trait Domain {
   /** Return true if remote versioned store contains newer data than local store. */
   def needsUpdate: Boolean
 }
+
+*/

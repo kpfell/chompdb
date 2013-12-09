@@ -1,4 +1,4 @@
-package chompdb
+package chompdb.testing
 
 import f1lesystem.FileSystem
 

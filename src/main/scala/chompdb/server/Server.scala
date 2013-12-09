@@ -4,20 +4,21 @@ import chompdb._
 import f1lesystem.FileSystem
 import scala.concurrent.Future
 
-object Database {
-  sealed trait DomainStatus
-  case object Loading extends DomainStatus
+/*
+object Server {
+  sealed trait ChompStatus
+  case object Loading extends ChompStatus
 }
 
-trait Database {
-  import Database._
+trait Server {
+  import Server._
 
   val fs: FileSystem
 
   def root: fs.Path
 
   /** Returns domains for which database is responsible */
-  def domains: Map[String, Domain]
+  def chomps: Map[String, Chomp]
 
   /** If an update is available on any domain, updates the domain's
    *  shards from its remote store and hotswaps in the new versions.
@@ -46,11 +47,13 @@ trait Database {
 
   def launchUpdater(): Unit
 }
+*/
 
+/*
 trait DatabaseManager {
   def apply(localRoot: String, domains: Iterable[String], options: Map[String, Any]): Database
 }
-
+*/
 
 /*
  * options:

@@ -1,13 +1,12 @@
-package chompdb
+package chompdb.store
 
+import chompdb.sharding._
 import f1lesystem.FileSystem
-import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicLong
+import java.io._
 import scala.collection._
-import java.io.EOFException
 
 object FileStore {
-
+  
   private[FileStore] trait BaseFile {
     val baseFile: FileSystem#File
     
@@ -20,28 +19,26 @@ object FileStore {
 
     private[this] lazy val blobs = new RandomAccessFile(blobFile.fullpath, "r")
   
-    private[this] lazy val indexes = new DataInputStream(new BufferedInputStream(new FileInputStream(indexFile.fullpath)))
-
-    private[this] lazy val idsToOffset = {
-      val map = mutable.Map[Long, Long]()
-      var done = false
-      while (!done) {
-        try {
-          val id = indexes.readLong()
-          val offset = indexes.readLong()
-          map(id) = offset
-        } catch { case e: java.io.EOFException =>
-          done = true
+    private[this] lazy val (ids, offsets) = {
+      val indexes = new DataInputStream(new BufferedInputStream(new FileInputStream(indexFile.fullpath)))
+      try {
+        val count = (indexFile.size / 16).toInt
+        val ids = new Array[Long](count)
+        val offsets = new Array[Long](count)
+        var i = 0
+        while (i < count) {
+          ids(i) = indexes.readLong()
+          offsets(i) = indexes.readLong()
+          i += 1
         }
-      }
-      map
+        (ids, offsets)
+      } finally indexes.close()
     }
     
-    override def get(key: Long): Option[Array[Byte]] = {
-      val offset = idsToOffset.get(key)
-      if (offset.isEmpty) return None
-      
-      blobs.seek(offset.get)
+    override def get(key: Long): Array[Byte] = {
+      val i = java.util.Arrays.binarySearch(ids, key)
+      if (ids(i) != key) throw new Store.NotFoundException(key)
+      blobs.seek(offsets(i))
       val id = blobs.readLong()
       val length = blobs.readInt()
       val value = new Array[Byte](length)
@@ -51,12 +48,11 @@ object FileStore {
         if (n == -1) throw new EOFException("Unexpected end of file reached")
         read += n
       }
-      Some(value)
+      value
     }
 
     override def close() {
       blobs.close()
-      indexes.close()
     }
   }
   
@@ -65,7 +61,7 @@ object FileStore {
     
     val shards: Sharded
     
-    private[chompdb] lazy val nextId = new NextId(shards)
+    private[chompdb] lazy val nextId = new IdGenerator(shards)
 
     private[this] lazy val blobs = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(blobFile.fullpath)))
   

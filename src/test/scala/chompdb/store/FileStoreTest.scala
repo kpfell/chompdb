@@ -1,12 +1,11 @@
-package chompdb
+package chompdb.store
 
+import chompdb._
+import chompdb.sharding._
+import chompdb.testing._
 import f1lesystem.LocalFileSystem
-
-import java.io.File
-
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
-
 import scala.collection._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -34,8 +33,8 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
       val reader = new FileStore.Reader {
         override val baseFile = writer.baseFile
       }
-      reader.get(id1) map byteArrayToString should be === Some("foo")
-      reader.get(id2) map byteArrayToString should be === Some("bar")
+      byteArrayToString(reader.get(id1)) should be === "foo"
+      byteArrayToString(reader.get(id2)) should be === "bar"
     }
 
     "support large amounts of data" in {
@@ -63,7 +62,7 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
           override val baseFile = writer.baseFile
         }
         for (i <- 1 to 100000) {
-          reader.get(map(i)) map byteArrayToString should be === Some(blob + "-" + i)
+          byteArrayToString(reader.get(map(i))) should be === (blob + "-" + i)
         }
         reader.close()
       }
@@ -88,7 +87,7 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
         val reader = new FileStore.Reader {
           override val baseFile = writer.baseFile
         }
-        reader.get(id) map byteArrayToString should be === Some(s"hello-$i")
+        byteArrayToString(reader.get(id)) should be === (s"hello-$i")
         reader.close()
         
         writer.delete()

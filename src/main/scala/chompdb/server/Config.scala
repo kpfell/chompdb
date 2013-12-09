@@ -1,10 +1,9 @@
 package chompdb.server
 
-import chompdb.DomainInfo
 import f1lesystem.FileSystem
 
 trait Config {
-  val domain: DomainInfo
+  // val domain: DomainInfo
 }
 
 trait ConfigReader {

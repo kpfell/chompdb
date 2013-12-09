@@ -1,19 +1,14 @@
-package chompdb
-
-import f1lesystem.LocalFileSystem
-
-import java.io.File
-
+package chompdb.sharding
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class NextIdTest extends WordSpec with ShouldMatchers {
+class IdGeneratorTest extends WordSpec with ShouldMatchers {
 
-  "NextId" should {
+  "IdGenerator" should {
     "calculate next id and return last id" in {
-      val next = new NextId(new Sharded {
+      val next = new IdGenerator(new Sharded {
         val shardsIndex = 1
         val shardsTotal = 10
       })
@@ -39,7 +34,7 @@ class NextIdTest extends WordSpec with ShouldMatchers {
       shard2.shardsTotal should be === 30
       
       locally {
-        val next = new NextId(shard2)
+        val next = new IdGenerator(shard2)
         next.nextId() should be === 5
         next.nextId() should be === 35
         next.nextId() should be === 65
@@ -47,7 +42,7 @@ class NextIdTest extends WordSpec with ShouldMatchers {
       
       val shard3 = shard1.split(index = 3, splits = 3) 
       locally {
-        val next = new NextId(shard3)
+        val next = new IdGenerator(shard3)
         next.nextId() should be === 6
         next.nextId() should be === 36
         next.nextId() should be === 66
