@@ -6,10 +6,6 @@ import java.io._
 import scala.collection._
 import java.util.concurrent.atomic.AtomicInteger
 
-object SpillingStore {
-
-}
-
 /** Non-thread-safe class; meant to be used by a single thread/writer. */
 trait ShardedStore extends Store.Writer {
   val baseDir: FileSystem#Dir
@@ -32,8 +28,10 @@ trait ShardedStore extends Store.Writer {
     }
   }
 
-  var currentWriterIndex = 0
+  private[chompdb] var currentWriterIndex = 0
 
+  def shardFiles = shardWriters map (_.baseFile )
+  
   override def put(value: Array[Byte]): Long = {
     val id = shardWriters(currentWriterIndex).put(value)
     currentWriterIndex += 1

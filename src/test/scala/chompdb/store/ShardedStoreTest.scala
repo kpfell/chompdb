@@ -49,5 +49,9 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
       }
       store.close()
     }
+    
+    "return resulting shard files" in newStore { store =>
+      store.shardFiles should be === (store.shardWriters map (_.baseFile)) 
+    }
   }
 }
