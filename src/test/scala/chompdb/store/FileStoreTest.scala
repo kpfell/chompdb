@@ -23,7 +23,7 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
           override val shardsTotal = 3
         }
       }
-      
+
       val id1 = writer.put("foo")
       id1 should be === 2
       val id2 = writer.put("bar")
@@ -49,14 +49,14 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
 
       val blob = "abcdefghijklmnopqrstuvwxyz"
       val map = mutable.Map[Int, Long]()
-      
+
       locally {
         for (i <- 1 to 100000) {
           map(i) = writer.put(blob + "-" + i)
         }
         writer.close()
       }
-      
+
       locally {
         val reader = new FileStore.Reader {
           override val baseFile = writer.baseFile
@@ -72,7 +72,7 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
       val tmp = new LocalFileSystem.TempRoot {
         override val rootName = "FileSystemWriterTest-Leak"
       }
-      
+
       for (i <- 1 to 99999) {
         val writer = new FileStore.Writer {
           override val baseFile = tmp.root / s"test-$i"
@@ -83,13 +83,13 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
         }
         val id = writer.put(s"hello-$i")
         writer.close()
-        
+
         val reader = new FileStore.Reader {
           override val baseFile = writer.baseFile
         }
         byteArrayToString(reader.get(id)) should be === (s"hello-$i")
         reader.close()
-        
+
         writer.delete()
       }
     }

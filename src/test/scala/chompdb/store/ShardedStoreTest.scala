@@ -18,28 +18,30 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
     override val baseDir = root
   }
 
-  
-  "ShardedStore" should {
-    def newStore() = new TestShardedStore {
-      val shardsTotal = 20   
-      val writers = 3 
+  def newStore(f: ShardedStore => Unit) = {
+    val store = new TestShardedStore {
+      val shardsTotal = 20
+      val writers = 3
       val writerIndex = 0
     }
-    
-    "calculate owned shards" in {
-      val store = newStore()
+    try f(store)
+    finally store.close()
+  }
+
+  "ShardedStore" should {
+
+    "calculate owned shards" in newStore { store =>
       store.currentWriterIndex should be === 0
       store.ownedShards should be === Seq(0, 3, 6, 9, 12, 15, 18)
       store.close()
     }
 
-    "cycle through shard writers" in {
-      val store = newStore()
+    "cycle through shard writers" in newStore { store =>
 
       var expectedId = 0
       store.ownedShards.zipWithIndex foreach { case (shardId, index) =>
         store.currentWriterIndex should be === index % store.ownedShards.size
-        
+
         val id = store.put(shardId.toString)
         id should be === expectedId
 

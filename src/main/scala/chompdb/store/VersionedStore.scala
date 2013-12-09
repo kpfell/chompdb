@@ -44,7 +44,7 @@ trait VersionedStore {
         p.deleteRecursively()
       }
     }
-    
+
     val rejects = versions.drop(versionsToKeep).toSet
     for (r <- rejects) {
       deleteVersion(r)

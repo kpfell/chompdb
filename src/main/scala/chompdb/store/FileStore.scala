@@ -6,19 +6,19 @@ import java.io._
 import scala.collection._
 
 object FileStore {
-  
+
   private[FileStore] trait BaseFile {
     val baseFile: FileSystem#File
-    
+
     lazy val blobFile  = baseFile.parent / s"${baseFile.filename}.blob"
     lazy val indexFile = baseFile.parent / s"${baseFile.filename}.index"
   }
-  
+
   trait Reader extends Store.Reader with BaseFile {
     import java.io.{RandomAccessFile, DataInputStream, BufferedInputStream, FileInputStream}
 
     private[this] lazy val blobs = new RandomAccessFile(blobFile.fullpath, "r")
-  
+
     private[this] lazy val (ids, offsets) = {
       val indexes = new DataInputStream(new BufferedInputStream(new FileInputStream(indexFile.fullpath)))
       try {
@@ -34,7 +34,7 @@ object FileStore {
         (ids, offsets)
       } finally indexes.close()
     }
-    
+
     override def get(key: Long): Array[Byte] = {
       val i = java.util.Arrays.binarySearch(ids, key)
       if (ids(i) != key) throw new Store.NotFoundException(key)
@@ -55,20 +55,20 @@ object FileStore {
       blobs.close()
     }
   }
-  
+
   trait Writer extends Store.Writer with BaseFile {
     import java.io.{RandomAccessFile, DataOutputStream, BufferedOutputStream, FileOutputStream}
-    
+
     val shards: Sharded
-    
+
     private[chompdb] lazy val nextId = new IdGenerator(shards)
 
     private[this] lazy val blobs = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(blobFile.fullpath)))
-  
+
     private[this] lazy val indexes = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(indexFile.fullpath)))
-    
+
     private[this] var offset = 0L
-    
+
     override def put(value: Array[Byte]): Long = synchronized {
       val id = nextId.nextId()
       blobs.writeLong(id)
@@ -79,12 +79,12 @@ object FileStore {
       offset += (8 + 4 + value.length)
       id
     }
-  
+
     override def close() {
       blobs.close()
       indexes.close()
     }
-    
+
     def delete() {
       blobFile.delete()
       indexFile.delete()

@@ -6,7 +6,7 @@ import scala.collection.JavaConverters._
 object DatabaseInfo {
   def deserialize(name: String, content: String) = {
     DatabaseInfo(
-      name, 
+      name,
       versions = content.split(',') map (_.toLong) toSet
     )
   }
