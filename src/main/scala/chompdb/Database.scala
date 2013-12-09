@@ -3,16 +3,16 @@ package chompdb
 import java.util.Properties
 import scala.collection.JavaConverters._
 
-object Chomp {
+object DatabaseInfo {
   def deserialize(name: String, content: String) = {
-    Chomp(
+    DatabaseInfo(
       name, 
       versions = content.split(',') map (_.toLong) toSet
     )
   }
 }
 
-case class Chomp(
+case class DatabaseInfo(
   name: String,
   versions: Set[Long]
 ) {

@@ -3,10 +3,10 @@ package chompdb
 import java.util.Properties
 import scala.collection.JavaConverters._
 
-object ChompVersion{
-  def fromProperties(chomp: Chomp, version: Long, props: Properties) = {
-    ChompVersion(
-      chomp,
+object DatabaseVersion{
+  def fromProperties(db: DatabaseInfo, version: Long, props: Properties) = {
+    DatabaseVersion(
+      db,
       version,
       props.getProperty("sharding_factor").toInt,
       props.getProperty("splits").toInt,
@@ -15,8 +15,8 @@ object ChompVersion{
   }
 }
 
-case class ChompVersion(
-  chomp: Chomp,
+case class DatabaseVersion(
+  db: DatabaseInfo,
   version: Long,
   shardingFactor: Int,
   splits: Int,
