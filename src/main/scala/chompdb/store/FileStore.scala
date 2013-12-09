@@ -7,14 +7,14 @@ import scala.collection._
 
 object FileStore {
 
-  private[FileStore] trait BaseFile {
+  trait StoreFiles {
     val baseFile: FileSystem#File
 
     lazy val blobFile  = baseFile.parent / s"${baseFile.filename}.blob"
     lazy val indexFile = baseFile.parent / s"${baseFile.filename}.index"
   }
 
-  trait Reader extends Store.Reader with BaseFile {
+  trait Reader extends Store.Reader with StoreFiles {
     import java.io.{RandomAccessFile, DataInputStream, BufferedInputStream, FileInputStream}
 
     private[this] lazy val blobs = new RandomAccessFile(blobFile.fullpath, "r")
@@ -56,7 +56,7 @@ object FileStore {
     }
   }
 
-  trait Writer extends Store.Writer with BaseFile {
+  trait Writer extends Store.Writer with StoreFiles {
     import java.io.{RandomAccessFile, DataOutputStream, BufferedOutputStream, FileOutputStream}
 
     val shards: Sharded

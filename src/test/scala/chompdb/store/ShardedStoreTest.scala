@@ -13,12 +13,12 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
   import TestUtils.stringToByteArray
   import TestUtils.byteArrayToString
 
-  trait TestShardedStore extends ShardedStore with LocalFileSystem.TempRoot {
+  trait TestShardedStore extends ShardedWriter with LocalFileSystem.TempRoot {
     override val rootName = "ShardedStoreTest"
     override val baseDir = root
   }
 
-  def newStore(f: ShardedStore => Unit) = {
+  def newShardedWriter(f: ShardedWriter => Unit) = {
     val store = new TestShardedStore {
       val shardsTotal = 20
       val writers = 3
@@ -30,28 +30,28 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
 
   "ShardedStore" should {
 
-    "calculate owned shards" in newStore { store =>
+    "calculate owned shards" in newShardedWriter { store =>
       store.currentWriterIndex should be === 0
       store.ownedShards should be === Seq(0, 3, 6, 9, 12, 15, 18)
       store.close()
     }
 
-    "cycle through shard writers" in newStore { store =>
+    "cycle through shard writers" in newShardedWriter { writer =>
 
       var expectedId = 0
-      store.ownedShards.zipWithIndex foreach { case (shardId, index) =>
-        store.currentWriterIndex should be === index % store.ownedShards.size
+      writer.ownedShards.zipWithIndex foreach { case (shardId, index) =>
+        writer.currentWriterIndex should be === index % writer.ownedShards.size
 
-        val id = store.put(shardId.toString)
+        val id = writer.put(shardId.toString)
         id should be === expectedId
 
-        expectedId += store.writers
+        expectedId += writer.writers
       }
-      store.close()
+      writer.close()
     }
     
-    "return resulting shard files" in newStore { store =>
-      store.shardFiles should be === (store.shardWriters map (_.baseFile)) 
+    "return resulting shard files" in newShardedWriter { writer =>
+      writer.shardFiles should be === (writer.shardWriters) 
     }
   }
 }
