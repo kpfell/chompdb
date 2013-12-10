@@ -2,19 +2,23 @@ package chompdb
 
 import java.util.Properties
 import scala.collection.JavaConverters._
+import f1lesystem.FileSystem
+import chompdb.store.VersionedStore
 
-object DatabaseInfo {
-  def deserialize(name: String, content: String) = {
-    DatabaseInfo(
-      name,
-      versions = content.split(',') map (_.toLong) toSet
-    )
-  }
-}
-
-case class DatabaseInfo(
-  name: String,
-  versions: Set[Long]
+class Database(
+  val catalog: Catalog,
+  val name: String
 ) {
-  def serialize = (versions mkString ",")
+  private[chompdb] lazy val versionedStore = new VersionedStore {
+    override val fs = catalog.fs
+    override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: remove cast
+  }
+
+  def createVersion(version: Long) = versionedStore.createVersion(version)
+
+  def succeedVersion(version: Long) = versionedStore.succeedVersion(version)
+  
+  override def equals(other: Any) = other match {
+    case d: Database => (d.catalog == catalog) && (d.name == name)
+  }
 }
