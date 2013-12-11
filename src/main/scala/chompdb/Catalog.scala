@@ -6,7 +6,6 @@ import f1lesystem.FileSystem
 
 object Catalog {
   def apply(name: String, fs: FileSystem, dir: FileSystem#Dir) = new Catalog(name, fs, dir)
-
 }
 class Catalog(
   val name: String, 
