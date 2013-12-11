@@ -18,7 +18,7 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	"Server" should {
 		"create a new ChompDB object" in {
 			val chomp = new ChompDB(Seq(testDatabase), 1, 1, 0, 1, new ScheduledExecutor(),
-				tmpRoot.fs//, tmpRoot.root
+				tmpRoot.fs, tmpRoot.root
 			)
 
 			chomp.getClass.getSimpleName should be === "ChompDB"

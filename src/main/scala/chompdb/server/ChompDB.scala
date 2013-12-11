@@ -3,7 +3,6 @@ package chompdb.server
 import chompdb.Database
 import f1lesystem.FileSystem
 
-// TODO: Add root directory parameter in a way that doesn't result in a type error
 class ChompDB(
 	val databases: Seq[Database],
 	val replicationFactor: Int,
@@ -11,8 +10,8 @@ class ChompDB(
 	val shardIndex: Int,
 	val totalShards: Int,
 	val executor: ScheduledExecutor,
-	val fs: FileSystem
-	// val rootDir: fs.Dir
+	val fs: FileSystem,
+	val rootDir: FileSystem#Dir
 ) {
 	// def downloadDatabaseVersion(version: Int)
 
