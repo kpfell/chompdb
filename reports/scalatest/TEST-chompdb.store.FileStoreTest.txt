@@ -1,0 +1,11 @@
+[36mRun starting. Expected test count is: 3[0m
+[32mFileStoreTest:[0m
+[32mFileStore[0m
+[32m- should write and read back data[0m
+[32m- should support large amounts of data[0m
+[32m- should not leak file descriptors when reading/writing[0m
+[36mRun completed in 1 minute, 6 seconds.[0m
+[36mTotal number of tests run: 3[0m
+[36mSuites: completed 1, aborted 0[0m
+[36mTests: succeeded 3, failed 0, canceled 0, ignored 0, pending 0[0m
+[32mAll tests passed.[0m

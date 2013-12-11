@@ -24,37 +24,43 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
       vs.mostRecentVersion should be === None
 
       val dir = vs.createVersion(1L)
-      vs.succeedVersion(1L)
+      vs.succeedVersion(1L, 1)
       vs.mostRecentVersion should be === Some(1L)
     }
 
     "delete versions" in {
       val dir = vs.createVersion(1L)
       (dir / "foo").touch()
-      vs.succeedVersion(1L)
+      vs.succeedVersion(1L, 1)
 
       vs.deleteVersion(1L)
       vs.versions should be === Seq.empty
     }
 
+    // TO DO: Revise vs so that this test can actually check for shard files
+    "create version file containing file manifest and total shards" in {
+      vs.succeedVersion(1L, 0)
+      vs.versionMarker(1L).readAsString() should be === "Total Shards: 0\n"
+    }
+
     "return versions in reverse chronological order" in {
-      vs.succeedVersion(2L)
+      vs.succeedVersion(2L, 1)
       vs.versions should be === Seq(2L)
       vs.mostRecentVersion should be === Some(2L)
 
-      vs.succeedVersion(1L)
+      vs.succeedVersion(1L, 1)
       vs.versions should be === Seq(2L, 1L)
       vs.mostRecentVersion should be === Some(2L)
 
-      vs.succeedVersion(3L)
+      vs.succeedVersion(3L, 1)
       vs.versions should be === Seq(3L, 2L, 1L)
       vs.mostRecentVersion should be === Some(3L)
     }
 
     "cleanup older versions" in {
-      vs.succeedVersion(1L)
-      vs.succeedVersion(2L)
-      vs.succeedVersion(3L)
+      vs.succeedVersion(1L, 1)
+      vs.succeedVersion(2L, 1)
+      vs.succeedVersion(3L, 1)
 
       vs.cleanup(versionsToKeep = 2)
 

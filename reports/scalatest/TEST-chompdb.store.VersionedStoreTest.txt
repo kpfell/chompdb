@@ -1,0 +1,13 @@
+[36mRun starting. Expected test count is: 5[0m
+[32mVersionedStoreTest:[0m
+[32mVersionedStore[0m
+[32m- should create versions[0m
+[32m- should delete versions[0m
+[32m- should create version file containing file manifest and total shards[0m
+[32m- should return versions in reverse chronological order[0m
+[32m- should cleanup older versions[0m
+[36mRun completed in 254 milliseconds.[0m
+[36mTotal number of tests run: 5[0m
+[36mSuites: completed 1, aborted 0[0m
+[36mTests: succeeded 5, failed 0, canceled 0, ignored 0, pending 0[0m
+[32mAll tests passed.[0m

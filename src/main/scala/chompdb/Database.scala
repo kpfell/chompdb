@@ -16,7 +16,7 @@ class Database(
 
   def createVersion(version: Long) = versionedStore.createVersion(version)
 
-  def succeedVersion(version: Long) = versionedStore.succeedVersion(version)
+  def succeedVersion(version: Long, shardsTotal: Int) = versionedStore.succeedVersion(version, shardsTotal)
   
   override def equals(other: Any) = other match {
     case d: Database => (d.catalog == catalog) && (d.name == name)

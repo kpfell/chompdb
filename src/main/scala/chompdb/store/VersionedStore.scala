@@ -32,8 +32,14 @@ trait VersionedStore {
     versionMarker(version).delete()
   }
 
-  def succeedVersion(version: Long) {
+  def succeedVersion(version: Long, shardsTotal: Int) {
     versionMarker(version).touch()
+    val files = versionPath(version).listFiles
+    val marker = versionMarker(version)
+    marker.write("Total Shards: " + shardsTotal.toString + "\n")
+    for (file <- files) {
+      marker.write(file.filename)
+    }
   }
 
   def cleanup(versionsToKeep: Int) {
