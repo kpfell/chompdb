@@ -33,10 +33,7 @@ class ChompDB(
 		}
 	}
 
-	// Copies a database version from S3 to local filesystem. 
-
 	// TODO: numThreads should not be hard set
-	// QUESTION: Does the .version file need to be copied over, as well? It is not currently.
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val numThreads = 5
 
@@ -59,6 +56,9 @@ class ChompDB(
 		}
 
 		copyShards(shardWriters, localDir)
+		shardWriters foreach { _.close() }
+
+		copyVersionFile(version, database.versionedStore.root, rootDir /+ database.catalog.name /+ database.name)
 
 		def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
 			for (w <- writers) {
@@ -67,6 +67,12 @@ class ChompDB(
 					copy(baseFile.blobFile, versionDir / baseFile.blobFile.filename)
 				}
 			}
+		}
+
+		def copyVersionFile(version: Long, versionRemoteDir: FileSystem#Dir, versionLocalDir: FileSystem#Dir) {
+			println("versionRemoteDir: " + versionRemoteDir.fullpath)
+			println("versionLocalDir: " + versionLocalDir.fullpath)
+			copy(versionRemoteDir / (version.toString + ".version"), versionLocalDir / (version.toString + ".version"))
 		}
 
 		def copy(from: FileSystem#File, to: FileSystem#File) {

@@ -7,7 +7,7 @@ import f1lesystem.LocalFileSystem
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompDBTest extends WordSpec with ShouldMatchers {
-	// Need to merge temporary file directories created for this test under one directory
+	// TODO: Merge temporary file directories created for this test under one directory
 	// i.e. dir > (local, remote)
 	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
 		override val rootName = "ChompDBTestRemote"
@@ -34,12 +34,14 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			newVersionNumber.get should be === testVersion
 		}
 
+		// TODO: Update testVersion so that it has multiple shards for this test to verify
 		"download a database version" in {
 			testChompDB.downloadDatabaseVersion(testDatabase, testVersion)
 
 			(testChompDB.rootDir /+ "TestCatalog").exists should be === true
 			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
-			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ (testVersion.toString)).exists should be === true
+			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString).exists should be === true
+			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion.toString + ".version")).exists should be === true
 			(0 until testDatabase
 				.versionedStore
 				.versionPath(testVersion)
