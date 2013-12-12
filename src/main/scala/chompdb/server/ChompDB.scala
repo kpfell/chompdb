@@ -17,23 +17,19 @@ class ChompDB(
 ) {
 	/* Returns version number, if any, of the latest database version to download from S3. */
 	def getNewVersionNumber(database: Database): Option[Long] = {
-		database.versionedStore.mostRecentVersion match {
-			case Some(latestRemoteVersion) => {
-				val localVersionDirectories = (rootDir /+ database.name)
+		database.versionedStore.mostRecentVersion flatMap { latestRemoteVersion => 
+			val localVersionDirectories = (rootDir /+ database.name)
 					.listDirectories 
 				
-				if (localVersionDirectories.size == 0) Some(latestRemoteVersion)
-				else {
-					val latestLocalVersion = localVersionDirectories
-						.map( d => d.filename.toLong )
-						.max
+			if (localVersionDirectories.size == 0) Some(latestRemoteVersion)
+			else {
+				val latestLocalVersion = localVersionDirectories
+					.map( d => d.filename.toLong )
+					.max
 
-					if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
-					else None
-				}
+				if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
+				else None
 			}
-
-			case None => None
 		}
 	}
 
