@@ -7,6 +7,8 @@ import f1lesystem.LocalFileSystem
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompDBTest extends WordSpec with ShouldMatchers {
+	// Need to merge temporary file directories created for this test under one directory
+	// i.e. dir > (local, remote)
 	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
 		override val rootName = "ChompDBTestRemote"
 	}
@@ -30,6 +32,27 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			val newVersionNumber = testChompDB.getNewVersionNumber(testDatabase)
 
 			newVersionNumber.get should be === testVersion
+		}
+
+		"download a database version" in {
+			testChompDB.downloadDatabaseVersion(testDatabase, testVersion)
+
+			(testChompDB.rootDir /+ "TestCatalog").exists should be === true
+			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
+			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ (testVersion.toString)).exists should be === true
+			(0 until testDatabase
+				.versionedStore
+				.versionPath(testVersion)
+				.listFiles
+				.size) foreach { n =>
+				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
+				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"n.blob").exists should be === true
+			}
+		}
+
+		"determine whether a version exists locally" in {
+			testChompDB.versionExists(testDatabase, 1L) should be === false
+			testChompDB.versionExists(testDatabase, 2L) should be === true
 		}
 	}
 }

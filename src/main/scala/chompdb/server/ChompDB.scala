@@ -34,17 +34,17 @@ class ChompDB(
 	}
 
 	// Copies a database version from S3 to local filesystem. 
-	// NOTE: Assumes that the database directory already exists locally--just not one specific version.
 
 	// TODO: numThreads should not be hard set
+	// QUESTION: Does the .version file need to be copied over, as well? It is not currently.
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val numThreads = 5
 
 		val remoteDir = database.versionedStore.versionPath(version)
-		val localDir = rootDir /+ database.name /+ version.toString
+		val localDir = rootDir /+ database.catalog.name /+ database.name /+ version.toString
 		localDir.mkdir()
 
-		val writers = (0 until numThreads) map { i => 
+		val shardWriters = (0 until numThreads) map { i => 
 			new ShardedWriter {
 				val writers = numThreads
 				val writerIndex = i
@@ -56,9 +56,9 @@ class ChompDB(
 
 				val baseDir = remoteDir
 			}
-		}		
+		}
 
-		copyShards(writers, localDir)
+		copyShards(shardWriters, localDir)
 
 		def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
 			for (w <- writers) {
@@ -74,8 +74,10 @@ class ChompDB(
 				to.write(reader, from.size)
 			}
 		}
+	}
 
-		// Need to copy succeedVersion...!
+	def versionExists(database: Database, version: Long): Boolean = {
+		(rootDir /+ database.catalog.name /+ database.name /+ version.toString).exists
 	}
 
 	// def start() {
