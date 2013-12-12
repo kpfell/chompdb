@@ -7,21 +7,29 @@ import f1lesystem.LocalFileSystem
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompDBTest extends WordSpec with ShouldMatchers {
-	val tmpRoot = new LocalFileSystem.TempRoot {
-		override val rootName = "ChompDBTest"
+	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
+		override val rootName = "ChompDBTestRemote"
 	}
 
-	val testCatalog = Catalog("TestCatalog", tmpRoot.fs, tmpRoot.root)
+	val tmpLocalRoot = new LocalFileSystem.TempRoot {
+		override val rootName = "ChompDBTestLocal"
+	}
 
+	val testCatalog = Catalog("TestCatalog", tmpRemoteRoot.fs, tmpRemoteRoot.root)
 	val testDatabase = testCatalog.database("TestDatabase")
+	val testVersion = 2L
+	val testVersionPath = testDatabase.createVersion(testVersion)
+	testDatabase.succeedVersion(2L, 1)
 
-	"Server" should {
-		"create a new ChompDB object" in {
-			val chomp = new ChompDB(Seq(testDatabase), 1, 1, 0, 1, new ScheduledExecutor(),
-				tmpRoot.fs, tmpRoot.root
-			)
+	val testChompDB = new ChompDB(Seq(testDatabase), 1, 1, 0, 1, new ScheduledExecutor(),
+		tmpLocalRoot.fs, tmpLocalRoot.root
+	)
 
-			chomp.getClass.getSimpleName should be === "ChompDB"
+	"ChompDB" should {
+		"retrieve new version number, if any, from database to update local filesystem" in {
+			val newVersionNumber = testChompDB.getNewVersionNumber(testDatabase)
+
+			newVersionNumber.get should be === testVersion
 		}
 	}
 }
