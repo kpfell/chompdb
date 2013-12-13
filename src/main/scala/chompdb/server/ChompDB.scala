@@ -3,7 +3,6 @@ package chompdb.server
 import chompdb.Database
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
-import scala.collection.mutable.SynchronizedSet
 
 class ChompDB(
 	val databases: Seq[Database],

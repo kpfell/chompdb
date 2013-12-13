@@ -72,12 +72,6 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	}
 
 	"ChompDB" should {
-		"retrieve new version number, if any, from database to update local filesystem" in {
-			val newVersionNumber = testChompDB.getNewVersionNumber(testDatabase)
-
-			newVersionNumber.get should be === testVersion
-		}
-
 		"download the latest database version" in {
 			testChompDB.updateDatabase(testDatabase)
 
@@ -94,11 +88,6 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.blob").exists should be === true
 			}
-		}
-
-		"determine whether a version exists locally" in {
-			testChompDB.versionExists(testDatabase, 1L) should be === false
-			testChompDB.versionExists(testDatabase, 2L) should be === true
 		}
 	}
 }
