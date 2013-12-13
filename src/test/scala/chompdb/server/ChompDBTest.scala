@@ -1,20 +1,38 @@
 package chompdb.server
 
 import chompdb._
+import f1lesystem.LocalFileSystem
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
-import f1lesystem.LocalFileSystem
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompDBTest extends WordSpec with ShouldMatchers {
-	// TODO: Merge temporary file directories created for this test under one directory
-	// i.e. dir > (local, remote)
+	val numThreads = 5
+
+	val testName = "ChompDBTest"
+
 	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
-		override val rootName = "ChompDBTestRemote"
+		override val rootName = "remote"
+		override lazy val root: fs.Dir = {
+			val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+			if (tmp.exists) {
+				tmp.deleteRecursively()
+			}
+			tmp.mkdir()
+			tmp
+		}
 	}
 
 	val tmpLocalRoot = new LocalFileSystem.TempRoot {
-		override val rootName = "ChompDBTestLocal"
+		override val rootName = "local"
+		override lazy val root: fs.Dir = {
+			val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+			if (tmp.exists) {
+				tmp.deleteRecursively()
+			}
+			tmp.mkdir()
+			tmp
+		}
 	}
 
 	val testCatalog = Catalog("TestCatalog", tmpRemoteRoot.fs, tmpRemoteRoot.root)
@@ -34,6 +52,7 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			newVersionNumber.get should be === testVersion
 		}
 
+		// TODO: Update testVersion so that it has multiple shards for this test to verify
 		"download the latest database version" in {
 			testChompDB.updateDatabase(testDatabase)
 
@@ -55,23 +74,5 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			testChompDB.versionExists(testDatabase, 1L) should be === false
 			testChompDB.versionExists(testDatabase, 2L) should be === true
 		}
-
-		// // TODO: Update testVersion so that it has multiple shards for this test to verify
-		// "download a database version" in {
-		// 	testChompDB.downloadDatabaseVersion(testDatabase, testVersion)
-
-		// 	(testChompDB.rootDir /+ "TestCatalog").exists should be === true
-		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
-		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString).exists should be === true
-		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion.toString + ".version")).exists should be === true
-		// 	(0 until testDatabase
-		// 		.versionedStore
-		// 		.versionPath(testVersion)
-		// 		.listFiles
-		// 		.size) foreach { n =>
-		// 		(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
-		// 		(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"n.blob").exists should be === true
-		// 	}
-		// }
 	}
 }
