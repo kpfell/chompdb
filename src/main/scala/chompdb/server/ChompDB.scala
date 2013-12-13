@@ -70,8 +70,6 @@ class ChompDB(
 		}
 
 		def copyVersionFile(version: Long, versionRemoteDir: FileSystem#Dir, versionLocalDir: FileSystem#Dir) {
-			println("versionRemoteDir: " + versionRemoteDir.fullpath)
-			println("versionLocalDir: " + versionLocalDir.fullpath)
 			copy(versionRemoteDir / (version.toString + ".version"), versionLocalDir / (version.toString + ".version"))
 		}
 
@@ -79,6 +77,13 @@ class ChompDB(
 			from.readAsReader { reader =>
 				to.write(reader, from.size)
 			}
+		}
+	}
+
+	def updateDatabase(database: Database) {
+		getNewVersionNumber(database) foreach { version => 
+			if (!versionExists(database, version)) 
+				downloadDatabaseVersion(database, version)
 		}
 	}
 

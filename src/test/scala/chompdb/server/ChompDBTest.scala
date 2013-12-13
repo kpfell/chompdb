@@ -34,9 +34,8 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			newVersionNumber.get should be === testVersion
 		}
 
-		// TODO: Update testVersion so that it has multiple shards for this test to verify
-		"download a database version" in {
-			testChompDB.downloadDatabaseVersion(testDatabase, testVersion)
+		"download the latest database version" in {
+			testChompDB.updateDatabase(testDatabase)
 
 			(testChompDB.rootDir /+ "TestCatalog").exists should be === true
 			(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
@@ -46,7 +45,7 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 				.versionedStore
 				.versionPath(testVersion)
 				.listFiles
-				.size) foreach { n =>
+				.size) foreach { n => 
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"n.blob").exists should be === true
 			}
@@ -56,5 +55,23 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			testChompDB.versionExists(testDatabase, 1L) should be === false
 			testChompDB.versionExists(testDatabase, 2L) should be === true
 		}
+
+		// // TODO: Update testVersion so that it has multiple shards for this test to verify
+		// "download a database version" in {
+		// 	testChompDB.downloadDatabaseVersion(testDatabase, testVersion)
+
+		// 	(testChompDB.rootDir /+ "TestCatalog").exists should be === true
+		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
+		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString).exists should be === true
+		// 	(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion.toString + ".version")).exists should be === true
+		// 	(0 until testDatabase
+		// 		.versionedStore
+		// 		.versionPath(testVersion)
+		// 		.listFiles
+		// 		.size) foreach { n =>
+		// 		(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
+		// 		(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"n.blob").exists should be === true
+		// 	}
+		// }
 	}
 }
