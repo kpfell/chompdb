@@ -1,14 +1,18 @@
 package chompdb.server
 
 import chompdb._
+import chompdb.store._
+import chompdb.testing._
 import f1lesystem.LocalFileSystem
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompDBTest extends WordSpec with ShouldMatchers {
-	val numThreads = 5
+	import TestUtils.stringToByteArray
+	import TestUtils.byteArrayToString
 
+	// Creates test ChompDB instance
 	val testName = "ChompDBTest"
 
 	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
@@ -45,6 +49,28 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 		tmpLocalRoot.fs, tmpLocalRoot.root
 	)
 
+	// Populates testVersion with shards
+	trait TestShardedStore extends ShardedWriter {
+		override val baseDir = testVersionPath
+	}
+
+	def newShardedWriter(f: ShardedWriter => Unit) = {
+		val store = new TestShardedStore {
+			val shardsTotal = 5
+			val writers = 1
+			val writerIndex = 0
+		}
+		try f(store)
+		finally store.close()
+	}
+
+	newShardedWriter { writer  => 
+		writer.ownedShards.zipWithIndex foreach { case (shardId, index) => 
+			val id = writer.put(shardId.toString)
+		}
+		writer.close()
+	}
+
 	"ChompDB" should {
 		"retrieve new version number, if any, from database to update local filesystem" in {
 			val newVersionNumber = testChompDB.getNewVersionNumber(testDatabase)
@@ -52,7 +78,6 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 			newVersionNumber.get should be === testVersion
 		}
 
-		// TODO: Update testVersion so that it has multiple shards for this test to verify
 		"download the latest database version" in {
 			testChompDB.updateDatabase(testDatabase)
 
@@ -64,9 +89,10 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 				.versionedStore
 				.versionPath(testVersion)
 				.listFiles
+				.filter(_.extension == "blob")
 				.size) foreach { n => 
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.index").exists should be === true
-				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"n.blob").exists should be === true
+				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.blob").exists should be === true
 			}
 		}
 
