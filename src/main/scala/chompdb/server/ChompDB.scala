@@ -49,9 +49,7 @@ abstract class ChompDB() {
 		copyShards(shardWriters, localDir)
 		shardWriters foreach { _.close() }
 
-		localVersionedStore.succeedVersion(version, database.versionedStore.countShardsInVersion(version))
-
-		// copyVersionFile(version, database.versionedStore.root, rootDir /+ database.catalog.name /+ database.name)
+		copyVersionFile(database.versionedStore.versionMarker(version), localVersionedStore.root)
 
 		def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
 			for (w <- writers) {
@@ -62,8 +60,8 @@ abstract class ChompDB() {
 			}
 		}
 
-		def copyVersionFile(version: Long, versionRemoteDir: FileSystem#Dir, versionLocalDir: FileSystem#Dir) {
-			copy(versionRemoteDir / (version.toString + ".version"), versionLocalDir / (version.toString + ".version"))
+		def copyVersionFile(versionRemotePath: FileSystem#File, versionLocalDir: FileSystem#Dir) {
+			copy(versionRemotePath, versionLocalDir / versionRemotePath.filename)
 		}
 
 		def copy(from: FileSystem#File, to: FileSystem#File) {
