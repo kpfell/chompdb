@@ -45,9 +45,17 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	val testVersionPath = testDatabase.createVersion(testVersion)
 	testDatabase.succeedVersion(2L, 1)
 
-	val testChompDB = new ChompDB(Seq(testDatabase), 1, 1, 0, 1, new ScheduledExecutor(),
-		tmpLocalRoot.fs, tmpLocalRoot.root
-	)
+	val testChompDB = new ChompDB {
+
+		val databases = Seq(testDatabase)
+		val replicationFactor = 1
+		val replicationFactorBeforeVersionUpgrade = 1 
+		val shardIndex = 0
+		val totalShards = 1
+		val executor = new ScheduledExecutor()
+		val fs = tmpLocalRoot.fs
+		val rootDir = tmpLocalRoot.root
+	}
 
 	// Populates testVersion with shards
 	trait TestShardedStore extends ShardedWriter {
@@ -72,6 +80,10 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	}
 
 	"ChompDB" should {
+		"retrieve the latest version to download, if any" in {
+			testChompDB.getNewVersionNumber(testDatabase) should be === Some(testVersion)
+		}
+
 		"download the latest database version" in {
 			testChompDB.updateDatabase(testDatabase)
 

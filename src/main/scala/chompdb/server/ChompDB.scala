@@ -1,33 +1,29 @@
 package chompdb.server
 
+import chompdb.store.VersionedStore
 import chompdb.Database
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 
-class ChompDB(
-	val databases: Seq[Database],
-	val replicationFactor: Int,
-	val replicationFactorBeforeVersionUpgrade: Int,
-	val shardIndex: Int,
-	val totalShards: Int,
-	val executor: ScheduledExecutor,
-	val fs: FileSystem,
+abstract class ChompDB() {
+
+	val databases: Seq[Database]
+	val replicationFactor: Int
+	val replicationFactorBeforeVersionUpgrade: Int
+	val shardIndex: Int
+	val totalShards: Int
+	val executor: ScheduledExecutor
+	val fs: FileSystem
 	val rootDir: FileSystem#Dir
-) {
+
 	/* Returns version number, if any, of the latest database version to download from S3. */
 	def getNewVersionNumber(database: Database): Option[Long] = {
 		database.versionedStore.mostRecentVersion flatMap { latestRemoteVersion => 
-			val localVersionDirectories = (rootDir /+ database.name)
-					.listDirectories 
-				
-			if (localVersionDirectories.size == 0) Some(latestRemoteVersion)
-			else {
-				val latestLocalVersion = localVersionDirectories
-					.map( d => d.filename.toLong )
-					.max
-
-				if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
-				else None
+			localVersionedStore(database).mostRecentVersion match {
+				case Some(latestLocalVersion) =>
+					if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
+					else None
+				case None => Some(latestRemoteVersion)
 			}
 		}
 	}
@@ -77,6 +73,11 @@ class ChompDB(
 				to.write(reader, from.size)
 			}
 		}
+	}
+
+	def localVersionedStore(database: Database): VersionedStore = new VersionedStore {
+		override val fs = ChompDB.this.fs
+		override val root = (rootDir /+ database.catalog.name /+ database.name).asInstanceOf[fs.Dir] // TODO: remove cast
 	}
 
 	def updateDatabase(database: Database) {
