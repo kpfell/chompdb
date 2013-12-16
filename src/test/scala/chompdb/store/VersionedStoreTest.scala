@@ -4,6 +4,8 @@ import chompdb._
 import chompdb.sharding._
 import chompdb.testing._
 import f1lesystem.LocalFileSystem
+import java.io._
+import java.util.Properties
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 import scala.collection._
@@ -38,9 +40,21 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
     }
 
     // TO DO: Revise vs so that this test can actually check for shard files
+    // TO DO: Figure out how to revise VersionedStore to omit FileInputStream
     "create version file containing file manifest and total shards" in {
-      vs.succeedVersion(1L, 0)
-      vs.versionMarker(1L).readAsString() should be === "Total Shards: 0\n"
+      vs.succeedVersion(1L, 1)
+
+      val props = new Properties()
+      props.put("shardsTotal", "1")
+      props.put("fileManifest", Seq().toString)
+
+      val succeededProps = new Properties()
+      val fileInputStream = new FileInputStream(vs.versionMarker(1L).fullpath)
+
+      succeededProps.load(fileInputStream)
+
+      succeededProps.getProperty("shardsTotal") should be === "1"
+      succeededProps.getProperty("fileManifest") should be === "List()"
     }
 
     "return versions in reverse chronological order" in {

@@ -1,6 +1,8 @@
 package chompdb.store
 
 import f1lesystem.FileSystem
+import java.io._
+import java.util.Properties
 
 object VersionedStore {
   val versionSuffix = ".version"
@@ -42,10 +44,14 @@ trait VersionedStore {
     versionMarker(version).touch()
     val files = versionPath(version).listFiles
     val marker = versionMarker(version)
-    marker.write("Total Shards: " + shardsTotal.toString + "\n")
-    for (file <- files) {
-      marker.write(file.filename)
-    }
+
+    val props = new Properties()
+    props.put("shardsTotal", shardsTotal.toString)
+    props.put("fileManifest", files.toString)
+
+    // TODO: .write and .store are both void functions, figure out how to nest them
+    val fileOutputStream = new FileOutputStream(marker.fullpath)
+    props.store(fileOutputStream, "")
   }
 
   def cleanup(versionsToKeep: Int) {
