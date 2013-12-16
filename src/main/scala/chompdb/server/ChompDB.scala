@@ -33,19 +33,15 @@ abstract class ChompDB() {
 		val numThreads = 5
 
 		val remoteDir = database.versionedStore.versionPath(version)
-		val localDir = rootDir /+ database.catalog.name /+ database.name /+ version.toString
-		localDir.mkdir()
+
+		val localVersionedStore = ChompDB.this.localVersionedStore(database)
+		val localDir = localVersionedStore.createVersion(version)
 
 		val shardWriters = (0 until numThreads) map { i => 
 			new ShardedWriter {
 				val writers = numThreads
 				val writerIndex = i
-				val shardsTotal = remoteDir
-					.listFiles
-					.map(_.filename)
-					.filter(_.endsWith(".blob"))
-					.size
-
+				val shardsTotal = database.versionedStore.countShardsInVersion(version)
 				val baseDir = remoteDir
 			}
 		}
@@ -53,7 +49,9 @@ abstract class ChompDB() {
 		copyShards(shardWriters, localDir)
 		shardWriters foreach { _.close() }
 
-		copyVersionFile(version, database.versionedStore.root, rootDir /+ database.catalog.name /+ database.name)
+		localVersionedStore.succeedVersion(version, database.versionedStore.countShardsInVersion(version))
+
+		// copyVersionFile(version, database.versionedStore.root, rootDir /+ database.catalog.name /+ database.name)
 
 		def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
 			for (w <- writers) {
