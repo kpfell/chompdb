@@ -4,6 +4,7 @@ import chompdb.store.VersionedStore
 import chompdb.Database
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
+import java.util.concurrent.ScheduledExecutorService
 
 abstract class ChompDB() {
 
@@ -12,7 +13,7 @@ abstract class ChompDB() {
 	val replicationFactorBeforeVersionUpgrade: Int
 	val shardIndex: Int
 	val totalShards: Int
-	val executor: ScheduledExecutor
+	val executor: ScheduledExecutorService
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 

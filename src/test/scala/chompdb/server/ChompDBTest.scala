@@ -4,6 +4,8 @@ import chompdb._
 import chompdb.store._
 import chompdb.testing._
 import f1lesystem.LocalFileSystem
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 
@@ -52,7 +54,7 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 		val replicationFactorBeforeVersionUpgrade = 1 
 		val shardIndex = 0
 		val totalShards = 1
-		val executor = new ScheduledExecutor()
+		val executor = Executors.newScheduledThreadPool(1)
 		val fs = tmpLocalRoot.fs
 		val rootDir = tmpLocalRoot.root
 	}
