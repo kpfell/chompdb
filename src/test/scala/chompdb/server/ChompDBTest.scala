@@ -6,6 +6,9 @@ import chompdb.testing._
 import f1lesystem.LocalFileSystem
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import pixii.fake._
+import scala.concurrent.duration._
+
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 
@@ -47,11 +50,21 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	val testVersionPath = testDatabase.createVersion(testVersion)
 	testDatabase.succeedVersion(2L, 1)
 
+	val testNodeAlive = new DynamoNodeAlive {
+		override def isAlive(node: Node): Boolean = true
+		override def imAlive(): Unit = println("alive")
+
+		val gracePeriod = Duration(10, SECONDS)
+		val tableName = "testTable"
+		protected val dynamoDB = new FakeDynamo()
+	}
+
 	val testChompDB = new ChompDB {
 
 		val databases = Seq(testDatabase)
 		val nodes = Map(Node("node1") -> Endpoint("endpointvalue"))
 		val nodeProtocol = new NodeProtocol()
+		val nodeAlive = testNodeAlive
 		val replicationFactor = 1
 		val replicationFactorBeforeVersionUpgrade = 1 
 		val shardIndex = 0

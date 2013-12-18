@@ -53,6 +53,7 @@ abstract class DynamoNodeAlive extends NodeAlive {
 		override val tableName = DynamoNodeAlive.this.tableName
 	}
 
+	// TODO: Abstract away the DynamoDB request with pixii
 	def isAlive(node: Node): Boolean = {
 		val key = Map("nodeId" -> new AttributeValue().withN(node.id))
 
