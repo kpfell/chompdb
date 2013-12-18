@@ -118,5 +118,12 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.blob").exists should be === true
 			}
 		}
+
+		"create a new ChompDBServer instance" in {
+			val testChompDBServer = new ChompDBServer {
+				val chompDB = testChompDB
+				// val nodesContent = Map(Node("testNode") -> Set(DatabaseVersionShard))
+			}
+		}
 	}
 }

@@ -39,7 +39,7 @@ abstract class AliveTable extends Table[NodeTimestamp] { //with TableOperations[
 	}	
 }
 
-// TODO: In sketch, retryPolicy included maxRetries
+// TODO: In sketch, retryPolicy included maxRetries?
 abstract class DynamoNodeAlive extends NodeAlive {
 	class SimpleLogger extends ConsoleLogger
 

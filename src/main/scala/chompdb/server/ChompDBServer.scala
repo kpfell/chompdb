@@ -1,7 +1,20 @@
 package chompdb.server
 
-class ChompDBServer {
-	// private val nodesAlive: Map[Node, Boolean]
+import chompdb.DatabaseVersionShard
+import scala.collection._
 
-	// private val nodesContent: Map[Node, Set[DatabaseVersionShard]]
+abstract class ChompDBServer {
+	val chompDB: ChompDB
+
+	@transient var nodesAlive: Map[Node, Boolean] = Map()
+	@transient var nodesContent: Map[Node, Set[DatabaseVersionShard]] = Map()
+
+	def updateNodesAlive() = {
+		nodesAlive = chompDB.nodes.keys.map({ n => n -> chompDB.nodeAlive.isAlive(n) })(breakOut)
+	}
+
+	// def updateNodesContent() = {
+	// 	nodesContent = chompDB.nodes.keys.map({ n => n -> chompDB.nodeProtocol.available(n) })
+	// 	chompDB.nodeProtocol.available
+	// }
 }
