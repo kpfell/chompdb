@@ -1,11 +1,9 @@
 package chompdb.server
 
-trait Node {
-// 	val id: String
-// 	val endpoint: String
-}
+case class Node(id: String)
 
-trait NodeProtocol {
+// SWITCH TO TRAIT WHEN IMPLEMENTING
+class NodeProtocol {
 // 	def available: Set[DatabaseVersionShard]
 // 	def mapReduce(dv: DatabaseVersion, ids: Set[Long])(map: T => U)(reduce: (U, U) => U): U
 }

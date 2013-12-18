@@ -50,6 +50,8 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	val testChompDB = new ChompDB {
 
 		val databases = Seq(testDatabase)
+		val nodes = Map(Node("node1") -> Endpoint("endpointvalue"))
+		val nodeProtocol = new NodeProtocol()
 		val replicationFactor = 1
 		val replicationFactorBeforeVersionUpgrade = 1 
 		val shardIndex = 0

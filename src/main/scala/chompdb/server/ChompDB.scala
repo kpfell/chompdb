@@ -9,6 +9,9 @@ import java.util.concurrent.ScheduledExecutorService
 abstract class ChompDB() {
 
 	val databases: Seq[Database]
+	val nodes: Map[Node, Endpoint]
+	val nodeProtocol: NodeProtocol
+	// val nodeAlive: NodeAlive
 	val replicationFactor: Int
 	val replicationFactorBeforeVersionUpgrade: Int
 	val shardIndex: Int
