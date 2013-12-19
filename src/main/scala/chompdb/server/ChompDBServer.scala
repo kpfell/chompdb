@@ -10,15 +10,18 @@ abstract class ChompDBServer {
 	@transient var nodesContent: Map[Node, Set[DatabaseVersionShard]] = Map()
 
 	def assignShards(shards: Set[DatabaseVersionShard]): Map[Node, Set[DatabaseVersionShard]] = {
-		// val replicationFactor = chompDB.replicationFactor
+		val replicationFactor = chompDB.replicationFactor
 		val nodesList = chompDB.nodes.keys.toList
 
 		// Does not account for replication factor
 		shards
-			.zipWithIndex
-			.map{ case (shard, idx) => (nodesList(idx % nodesList.length), shard)}
+			.zipWithIndex // Set[Tuple[Shard, Int]]
+			.flatMap { case (shard, idx) => 
+				(0 until replicationFactor) 
+					.map { r => (nodesList((idx + r) % nodesList.length), shard) }
+			}
 			.groupBy(_._1)
-			.map{ case (k, v) => (k, v.map(_._2)) }
+			.map { case (n, s) => (n, s.map(_._2)) }
 	}
 
 	def updateNodesAlive() = {
