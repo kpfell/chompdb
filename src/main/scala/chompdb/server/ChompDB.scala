@@ -20,7 +20,6 @@ abstract class ChompDB() {
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 
-	/* Returns version number, if any, of the latest database version to download from S3. */
 	def getNewVersionNumber(database: Database): Option[Long] = {
 		database.versionedStore.mostRecentVersion flatMap { latestRemoteVersion => 
 			localVersionedStore(database).mostRecentVersion match {

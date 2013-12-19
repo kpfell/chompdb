@@ -9,12 +9,21 @@ abstract class ChompDBServer {
 	@transient var nodesAlive: Map[Node, Boolean] = Map()
 	@transient var nodesContent: Map[Node, Set[DatabaseVersionShard]] = Map()
 
-	def updateNodesAlive() = {
-		nodesAlive = chompDB.nodes.keys.map({ n => n -> chompDB.nodeAlive.isAlive(n) })(breakOut)
+	def assignShards(shards: Set[DatabaseVersionShard]) = {
+		// Empty for now
 	}
 
-	// def updateNodesContent() = {
-	// 	nodesContent = chompDB.nodes.keys.map({ n => n -> chompDB.nodeProtocol.available(n) })
-	// 	chompDB.nodeProtocol.available
-	// }
+	def updateNodesAlive() = {
+		nodesAlive = chompDB
+			.nodes
+			.keys
+			.map({ n => n -> chompDB.nodeAlive.isAlive(n) })(breakOut)
+	}
+
+	def updateNodesContent() = {
+		nodesContent = chompDB
+			.nodes
+			.keys
+			.map({ n => n -> chompDB.nodeProtocol.available(n) })(breakOut)
+	}
 }
