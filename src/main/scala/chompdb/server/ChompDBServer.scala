@@ -9,8 +9,16 @@ abstract class ChompDBServer {
 	@transient var nodesAlive: Map[Node, Boolean] = Map()
 	@transient var nodesContent: Map[Node, Set[DatabaseVersionShard]] = Map()
 
-	def assignShards(shards: Set[DatabaseVersionShard]) = {
-		// Empty for now
+	def assignShards(shards: Set[DatabaseVersionShard]): Map[Node, Set[DatabaseVersionShard]] = {
+		// val replicationFactor = chompDB.replicationFactor
+		val nodesList = chompDB.nodes.keys.toList
+
+		// Does not account for replication factor
+		shards
+			.zipWithIndex
+			.map{ case (shard, idx) => (nodesList(idx % nodesList.length), shard)}
+			.groupBy(_._1)
+			.map{ case (k, v) => (k, v.map(_._2)) }
 	}
 
 	def updateNodesAlive() = {
