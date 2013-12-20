@@ -62,7 +62,10 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 	val testChompDB = new ChompDB {
 
 		val databases = Seq(testDatabase)
-		val nodes = Map(Node("node1") -> Endpoint("endpointvalue"))
+		val nodes = Map(
+			Node("node1") -> Endpoint("endpoint1"), 
+			Node("node2") -> Endpoint("endpoint2")
+		)
 		val nodeProtocol = new NodeProtocol()
 		val nodeAlive = testNodeAlive
 		val replicationFactor = 1
@@ -118,12 +121,47 @@ class ChompDBTest extends WordSpec with ShouldMatchers {
 				(testChompDB.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion.toString / s"$n.blob").exists should be === true
 			}
 		}
+	}
+
+	"ChompDBServer" should {
 
 		"create a new ChompDBServer instance" in {
 			val testChompDBServer = new ChompDBServer {
 				val chompDB = testChompDB
-				// val nodesContent = Map(Node("testNode") -> Set(DatabaseVersionShard))
 			}
+		}
+
+		"assign DatabaseVersionShards to nodes" in {
+			val testChompDBServer = new ChompDBServer {
+				val chompDB = testChompDB
+			}
+
+			val shards: Set[DatabaseVersionShard] = testChompDBServer
+				.chompDB
+				.localVersionedStore(testDatabase)
+				.mostRecentVersion match { 
+					case Some(version) =>
+						testChompDBServer
+							.chompDB
+							.localVersionedStore(testDatabase)
+							.getVersionShards(version)
+					case None => Set[DatabaseVersionShard]()
+				}
+
+			val assignedShardsMap = testChompDBServer.assignShards(shards)
+
+			assignedShardsMap.size should be === testChompDBServer.chompDB.nodes.size
+
+			val incorrectShardCounts = assignedShardsMap
+				.values
+				.flatten
+				.foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0) {
+					(s, c) => s + (c -> (1 + s(c))) 
+				}
+				.filter(_._2 != testChompDBServer.chompDB.replicationFactor)
+				.size 
+
+			incorrectShardCounts should be === 0
 		}
 	}
 }

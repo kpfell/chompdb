@@ -1,5 +1,6 @@
 package chompdb.store
 
+import chompdb.DatabaseVersionShard
 import f1lesystem.FileSystem
 import java.io._
 import java.util.Properties
@@ -26,6 +27,36 @@ trait VersionedStore {
     .map(_.filename)
     .filter(_.endsWith(".blob"))
     .size
+
+  def getVersionShards(): Set[DatabaseVersionShard] = VersionedStore.this.versions
+    .map { version => VersionedStore.this
+      .versionPath(version)
+      .listFiles
+      .filter(_.extension == "blob")
+      .map { blobFile => 
+        DatabaseVersionShard(
+          version,
+          blobFile.basename.toInt,
+          blobFile,
+          blobFile.parent / (blobFile.basename + "index")
+        )
+      }
+    }
+    .map(_.toSet)
+    .fold(Set[DatabaseVersionShard]())(_ ++ _)
+
+  def getVersionShards(version: Long): Set[DatabaseVersionShard] = versionPath(version)
+    .listFiles
+    .filter(_.extension == "blob")
+    .map { blobFile => 
+      DatabaseVersionShard(
+        version,
+        blobFile.basename.toInt,
+        blobFile,
+        blobFile.parent / (blobFile.basename + ".index")
+      )
+    }
+    .toSet
 
   def createVersion(version: Long = System.currentTimeMillis): fs.Dir = {
     if (versions contains version) throw new RuntimeException("Version already exists")

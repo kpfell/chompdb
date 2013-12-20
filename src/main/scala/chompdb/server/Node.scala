@@ -10,6 +10,7 @@ case class Node(id: String)
 
 // SWITCH TO TRAIT WHEN IMPLEMENTING
 class NodeProtocol {
+	// TODO: This method doesn't make any sense. No sense at all...!
 	def available(node: Node): Set[DatabaseVersionShard] = {
 		val versionedStore = new VersionedStore { 
 			val fs = new LocalFileSystem()

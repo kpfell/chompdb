@@ -13,9 +13,8 @@ abstract class ChompDBServer {
 		val replicationFactor = chompDB.replicationFactor
 		val nodesList = chompDB.nodes.keys.toList
 
-		// Does not account for replication factor
 		shards
-			.zipWithIndex // Set[Tuple[Shard, Int]]
+			.zipWithIndex
 			.flatMap { case (shard, idx) => 
 				(0 until replicationFactor) 
 					.map { r => (nodesList((idx + r) % nodesList.length), shard) }
