@@ -14,7 +14,7 @@ abstract class NodeProtocol {
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
 
   // SERVER-SIDE
-  def localShards(): Set[DatabaseVersionShard] = chomp
+  def allLocalShards(): Set[DatabaseVersionShard] = chomp
     .databases
     .map { chomp.localDB(_) }
     .flatMap { db => db

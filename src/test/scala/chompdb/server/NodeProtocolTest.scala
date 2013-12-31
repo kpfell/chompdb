@@ -49,7 +49,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   }
 
   "NodeProtocol" should {
-    "return empty set when no shards exist" in {
+    "return empty set when no shards exist in any database" in {
       // CLIENT-SIDE
       testChomp
         .nodeProtocol
@@ -58,7 +58,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
       // SERVER-SIDE
       testChomp
         .nodeProtocol
-        .localShards should be === Set.empty
+        .allLocalShards should be === Set.empty
     }
 
     "return set of DatabaseVersionShards available locally" in {      
@@ -70,7 +70,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
       testChomp
         .nodeProtocol
-        .localShards
+        .allLocalShards
         .size should be === 2
     }
   }
