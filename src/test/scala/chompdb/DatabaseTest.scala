@@ -3,7 +3,6 @@ package chompdb
 import chompdb._
 import f1lesystem.LocalFileSystem
 
-import org.mockito.Mockito.{ mock, when }
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 

@@ -8,13 +8,13 @@ import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
 
 abstract class Chomp() {
-	val databases: Seq[Database] // List of remote databases in S3?
-	val nodes: Map[Node, Endpoint] // TODO: Should Endpoint be a value within Node, or...?
+	val databases: Seq[Database]
+	val nodes: Map[Node, Endpoint] 
 	val nodeProtocolInfo: NodeProtocolInfo
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
-	val replicationFactorBeforeVersionUpgrade: Int // TODO: Come up with a better name
-	val shardIndex: Int // TODO: Clarify this
+	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
+	val shardIndex: Int
 	val totalShards: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem

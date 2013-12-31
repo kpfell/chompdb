@@ -41,7 +41,7 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
     when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
     when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
     val replicationFactor = 1
-    val replicationFactorBeforeVersionUpgrade = 1
+    val replicationBeforeVersionUpgrade = 1
     val shardIndex = 0
     val totalShards = 1
     val executor = mock(classOf[ScheduledExecutorService])

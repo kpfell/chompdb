@@ -54,11 +54,11 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
 	val testChomp = new Chomp {
 		val databases = Seq(testDatabase)
-		val nodes = mock(classOf[Map[Node, Endpoint]])
+		val nodes = Map(Node("Node1") -> Endpoint("Endpoint1"))
 		val nodeProtocolInfo = mock(classOf[NodeProtocolInfo])
 		val nodeAlive = mock(classOf[NodeAlive])
 		val replicationFactor = 1
-		val replicationFactorBeforeVersionUpgrade = 1
+		val replicationBeforeVersionUpgrade = 1
 		val shardIndex = 0
 		val totalShards = 1
 		val executor = mock(classOf[ScheduledExecutorService])
