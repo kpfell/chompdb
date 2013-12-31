@@ -1,6 +1,5 @@
 package chompdb.store
 
-import chompdb.DatabaseVersionShard
 import f1lesystem.FileSystem
 import java.io._
 import java.util.Properties
@@ -28,36 +27,6 @@ trait VersionedStore {
     .filter(_.endsWith(".blob"))
     .size
 
-  def getVersionShards(): Set[DatabaseVersionShard] = VersionedStore.this.versions
-    .map { version => VersionedStore.this
-      .versionPath(version)
-      .listFiles
-      .filter(_.extension == "blob")
-      .map { blobFile => 
-        DatabaseVersionShard(
-          version,
-          blobFile.basename.toInt,
-          blobFile,
-          blobFile.parent / (blobFile.basename + "index")
-        )
-      }
-    }
-    .map(_.toSet)
-    .fold(Set[DatabaseVersionShard]())(_ ++ _)
-
-  def getVersionShards(version: Long): Set[DatabaseVersionShard] = versionPath(version)
-    .listFiles
-    .filter(_.extension == "blob")
-    .map { blobFile => 
-      DatabaseVersionShard(
-        version,
-        blobFile.basename.toInt,
-        blobFile,
-        blobFile.parent / (blobFile.basename + ".index")
-      )
-    }
-    .toSet
-
   def createVersion(version: Long = System.currentTimeMillis): fs.Dir = {
     if (versions contains version) throw new RuntimeException("Version already exists")
     val path = versionPath(version)
@@ -80,7 +49,6 @@ trait VersionedStore {
     props.put("shardsTotal", shardsTotal.toString)
     props.put("fileManifest", files.toString)
 
-    // TODO: .write and .store are both void functions, figure out how to nest them
     val fileOutputStream = new FileOutputStream(marker.fullpath)
     props.store(fileOutputStream, "")
   }
@@ -100,7 +68,7 @@ trait VersionedStore {
     }
   }
 
-  /** Sorted from most recent to oldest */
+  /* Sorted from most recent to oldest */
   def versions = {
     if (!root.exists) {
       Seq.empty

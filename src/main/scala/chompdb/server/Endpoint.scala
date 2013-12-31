@@ -1,4 +1,3 @@
 package chompdb.server
 
-// TODO: Make a trait?
-case class Endpoint(value: String)
+case class Endpoint(endpoint: String)

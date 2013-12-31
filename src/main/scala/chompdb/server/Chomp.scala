@@ -1,47 +1,44 @@
 package chompdb.server
 
 import chompdb.store.VersionedStore
+import chompdb.Catalog
 import chompdb.Database
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
 
-abstract class ChompDB() {
-
-	val databases: Seq[Database]
-	val nodes: Map[Node, Endpoint]
-	val nodeProtocol: NodeProtocol
+abstract class Chomp() {
+	val databases: Seq[Database] // List of remote databases in S3?
+	val nodes: Map[Node, Endpoint] // TODO: Should Endpoint be a value within Node, or...?
+	val nodeProtocolInfo: NodeProtocolInfo
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
-	val replicationFactorBeforeVersionUpgrade: Int
-	val shardIndex: Int
+	val replicationFactorBeforeVersionUpgrade: Int // TODO: Come up with a better name
+	val shardIndex: Int // TODO: Clarify this
 	val totalShards: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 
-	def getNewVersionNumber(database: Database): Option[Long] = {
-		database.versionedStore.mostRecentVersion flatMap { latestRemoteVersion => 
-			localVersionedStore(database).mostRecentVersion match {
-				case Some(latestLocalVersion) =>
-					if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
-					else None
-				case None => Some(latestRemoteVersion)
-			}
-		}
+	@transient var servingVersions: Map[Database, Option[Long]] = Map()
+
+	lazy val nodeProtocol = new NodeProtocol {
+		override val chomp = Chomp.this
+
+		def availableShards = nodeProtocolInfo.availableShards(_: Node)
 	}
 
 	// TODO: numThreads should not be hard set
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val numThreads = 5
 
-		val remoteDir = database.versionedStore.versionPath(version)
+		val remoteDir = database.versionPath(version)
 
-		val localVersionedStore = ChompDB.this.localVersionedStore(database)
-		val localDir = localVersionedStore.createVersion(version)
+		val localDB = Chomp.this.localDB(database)
+		val localDir = localDB.createVersion(version)
 
 		copyShards(remoteDir, localDir)
-		copyVersionFile(database.versionedStore.versionMarker(version), localVersionedStore.root)
+		copyVersionFile(database.versionMarker(version), localDB.root)
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
 			for (file <- remoteVersionDir.listFiles) {
@@ -54,20 +51,43 @@ abstract class ChompDB() {
 		}
 
 		def copy(from: FileSystem#File, to: FileSystem#File) {
-			from.readAsReader { reader =>
+			from.readAsReader { reader => 
 				to.write(reader, from.size)
 			}
 		}
 	}
 
-	def localVersionedStore(database: Database): VersionedStore = new VersionedStore {
-		override val fs = ChompDB.this.fs
-		override val root = (rootDir /+ database.catalog.name /+ database.name).asInstanceOf[fs.Dir] // TODO: remove cast
+	def getNewVersionNumber(database: Database): Option[Long] = database
+		.mostRecentVersion
+		.flatMap { latestRemoteVersion => 
+			localDB(database).mostRecentVersion match {
+				case Some(latestLocalVersion) =>
+					if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
+					else None
+				case None => Some(latestRemoteVersion)
+			}
+		}
+
+	def localDB(database: Database): Database = new Database(
+		new Catalog(database.catalog.name, fs, rootDir),
+		database.name
+	)
+
+	def initializeServingVersions() = {
+		servingVersions = databases
+			.map { db => 
+				(db, localDB(db).mostRecentVersion) 
+			}
+			.toMap
+	}
+
+	def serveVersion(database: Database, version: Option[Long]) = {
+		servingVersions = servingVersions + (database -> version)
 	}
 
 	def updateDatabase(database: Database) {
 		getNewVersionNumber(database) foreach { version => 
-			if (!versionExists(database, version)) 
+			if (!versionExists(database, version))
 				downloadDatabaseVersion(database, version)
 		}
 	}
@@ -75,8 +95,4 @@ abstract class ChompDB() {
 	def versionExists(database: Database, version: Long): Boolean = {
 		(rootDir /+ database.catalog.name /+ database.name /+ version.toString).exists
 	}
-
-	// def start() {
-	// 	executor.schedule(timerTask, period)
-	// }
 }
