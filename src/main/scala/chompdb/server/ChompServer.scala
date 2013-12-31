@@ -20,6 +20,6 @@ abstract class ChompServer {
     nodesContent = chomp
       .nodes
       .keys
-      .map( n => n -> chomp.nodeProtocol.availableShards(n) )(breakOut)
+      .map( n => n -> chomp.nodeProtocol.allAvailableShards(n) )(breakOut)
   }
 }

@@ -25,15 +25,24 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
   }
 
   val testChomp = new Chomp {
-    val databases = Seq(mock(classOf[Database]))
+    val databases = Seq(mock(classOf[Database])) // Need to reimplement nodeProtocolInfo if this is implemented
     val nodes = Map(Node("Node1") -> Endpoint("endpoint1"), 
       Node("Node2") -> Endpoint("endpoint2"))
     val nodeProtocolInfo = new NodeProtocolInfo {
-      def availableShards(n: Node): Set[DatabaseVersionShard] = {
+      def allAvailableShards(n: Node): Set[DatabaseVersionShard] = {
         Set(
           DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 1),
           DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 2),
           DatabaseVersionShard("TbiCatalog", "TbiDatabase2", 2L, 1)
+        )
+      }
+
+      def availableShards(n: Node, db: Database): Set[DatabaseVersionShard] = {
+        Set(
+          DatabaseVersionShard(db.catalog.name, db.name, 1L, 1),
+          DatabaseVersionShard(db.catalog.name, db.name, 1L, 2),
+          DatabaseVersionShard(db.catalog.name, db.name, 2L, 1),
+          DatabaseVersionShard(db.catalog.name, db.name, 2L, 2)
         )
       }
     }

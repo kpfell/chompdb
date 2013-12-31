@@ -25,7 +25,8 @@ abstract class Chomp() {
 	lazy val nodeProtocol = new NodeProtocol {
 		override val chomp = Chomp.this
 
-		def availableShards = nodeProtocolInfo.availableShards(_: Node)
+		def allAvailableShards = nodeProtocolInfo.allAvailableShards(_: Node)
+		def availableShards = nodeProtocolInfo.availableShards(_: Node, _: Database)
 	}
 
 	// TODO: numThreads should not be hard set

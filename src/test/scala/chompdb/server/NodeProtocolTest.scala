@@ -30,7 +30,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val db = cat.database("TestDatabase")
 
   val npi = new NodeProtocolInfo {
-    def availableShards(n: Node) = Set[DatabaseVersionShard]()
+    def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
+    def availableShards(n: Node, db: Database) = Set[DatabaseVersionShard]()
   }
 
   val testChomp = new Chomp {
@@ -52,7 +53,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
       // CLIENT-SIDE
       testChomp
         .nodeProtocol
-        .availableShards(mock(classOf[Node])) should be === Set.empty
+        .allAvailableShards(mock(classOf[Node])) should be === Set.empty
 
       // SERVER-SIDE
       testChomp

@@ -1,7 +1,9 @@
 package chompdb.server
 
+import chompdb.Database
 import chompdb.DatabaseVersionShard
 
 abstract class NodeProtocolInfo {
-  def availableShards(n: Node): Set[DatabaseVersionShard]
+  def allAvailableShards(n: Node): Set[DatabaseVersionShard]
+  def availableShards(n: Node, db: Database): Set[DatabaseVersionShard]
 }
