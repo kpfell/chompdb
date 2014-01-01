@@ -45,6 +45,14 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
           DatabaseVersionShard(db.catalog.name, db.name, 2L, 2)
         )
       }
+
+      def latestVersion(n: Node, db: Database): Option[Long] = {
+        if (db.name == "TbiDatabase1") Some(1L)
+        else if (db.name == "TbiDatabase2") Some(2L)
+        else None
+      }
+
+      def serveVersion(n: Node, db: Database, v: Long): Boolean = true
     }
     val nodeAlive = mock(classOf[NodeAlive])
     when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)

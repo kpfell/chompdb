@@ -27,6 +27,8 @@ abstract class Chomp() {
 
 		def allAvailableShards = nodeProtocolInfo.allAvailableShards(_: Node)
 		def availableShards = nodeProtocolInfo.availableShards(_: Node, _: Database)
+		def latestVersion = nodeProtocolInfo.latestVersion(_: Node, _: Database)
+		def serveVersion = nodeProtocolInfo.serveVersion(_: Node, _: Database, _: Long)
 	}
 
 	// TODO: numThreads should not be hard set
