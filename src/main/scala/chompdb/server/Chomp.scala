@@ -27,6 +27,7 @@ abstract class Chomp() {
 
 		def allAvailableShards = nodeProtocolInfo.allAvailableShards(_: Node)
 		def availableShards = nodeProtocolInfo.availableShards(_: Node, _: Database)
+		def availableShardsForVersion = nodeProtocolInfo.availableShardsForVersion(_: Node, _: Database, _: Long)
 		def latestVersion = nodeProtocolInfo.latestVersion(_: Node, _: Database)
 		def serveVersion = nodeProtocolInfo.serveVersion(_: Node, _: Database, _: Long)
 	}

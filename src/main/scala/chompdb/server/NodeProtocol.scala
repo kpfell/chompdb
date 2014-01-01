@@ -12,8 +12,15 @@ abstract class NodeProtocol {
   // CLIENT-SIDE
   def allAvailableShards: Node => Set[DatabaseVersionShard]
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
+  def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
   def latestVersion: (Node, Database) => Option[Long]
   def serveVersion: (Node, Database, Long) => Boolean
+
+  def latestRemoteVersions(db: Database): Set[Option[Long]] = chomp
+    .nodes
+    .keys
+    .map { n => latestVersion(n, db) }
+    .toSet
 
   // SERVER-SIDE
   def allLocalShards(): Set[DatabaseVersionShard] = chomp
@@ -40,50 +47,43 @@ abstract class NodeProtocol {
 
   /* IN PROGRESS */
   def switchServedVersion(db: Database) {
+    // TODO: Need to check that the latest version is not already being served
     // Determine latest Database version available locally
     chomp
       .localDB(db)
       .mostRecentVersion
       .foreach { latestLocalDatabaseVersion =>
-        // Query other nodes to see if their latest Database versions are the same
-        val latestRemoteVersions = chomp
-          .nodes
-          .keys
-          .map { n => latestVersion(n, db) }
-          .flatten // ^^ SWITCH TO FLATMAP? ^^
-          .filter { v => v == None || v > latestLocalDatabaseVersion }
-          // TODO: Replace the v == None comparison
+        val versionGroups = latestRemoteVersions(db)
+          .groupBy {
+            case None => "none"
+            case v if (v.get < latestLocalDatabaseVersion) => "older"
+            case v if (v.get == latestLocalDatabaseVersion) => "equal"
+            case _ => "newer"
+          } 
 
-        if (latestRemoteVersions.size > 0) {
-          // If not, and there is a newer version, download that version
-        } else {
-          // If so, query the other nodes for their Database versions
-          // Create a map of shard -> count
-          val latestRemoteDBVs = chomp
+        // TODO: Other cases
+        if (versionGroups.contains("equal") && versionGroups.size == 1) {
+          val shardsBelowMinReplication = chomp
             .nodes
             .keys
-            .map { n => availableShards(n, db) }
+            .map { n => availableShardsForVersion(n, db, latestLocalDatabaseVersion) }
             .toList
             .flatten
-            .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){ 
+            .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
               (s, x) => s + (x -> (1 + s(x)))
             }
             .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-            .size
+          
+          if (shardsBelowMinReplication.size == 0) {
+            serveVersion(db, Some(latestLocalDatabaseVersion))
 
-          if (latestRemoteDBVs == 0) {
-            chomp.serveVersion(db, Some(latestLocalDatabaseVersion)) // NEED TO ACCOUNT FOR CASE WHERE LATESTLOCALVERSION IS THE VERSION BEING SERVED
-            
             chomp
               .nodes
               .keys
-              .map { n => serveVersion(n, db, latestLocalDatabaseVersion) }
+              .foreach { n => serveVersion(n, db, latestLocalDatabaseVersion) }
           }
-        }
+        }  
       }
 
-
-    // If count for each shard is >= replicationBeforeVersionUpgrade, begin serving the latest local version
-    // Send command to other nodes for them to switch to the latest local version
   }
 }

@@ -32,6 +32,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val npi = new NodeProtocolInfo {
     def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
     def availableShards(n: Node, db: Database) = Set[DatabaseVersionShard]()
+    def availableShardsForVersion(n: Node, db: Database, v: Long) = Set[DatabaseVersionShard]()
     def latestVersion(n: Node, db: Database) = None
     def serveVersion(n: Node, db: Database, v: Long) = true
   }

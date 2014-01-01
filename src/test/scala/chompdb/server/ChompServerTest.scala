@@ -46,6 +46,13 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
         )
       }
 
+      def availableShardsForVersion(n: Node, db: Database, v: Long): Set[DatabaseVersionShard] = {
+        Set(
+          DatabaseVersionShard(db.catalog.name, db.name, v, 1),
+          DatabaseVersionShard(db.catalog.name, db.name, v, 2)
+        )
+      }
+
       def latestVersion(n: Node, db: Database): Option[Long] = {
         if (db.name == "TbiDatabase1") Some(1L)
         else if (db.name == "TbiDatabase2") Some(2L)
