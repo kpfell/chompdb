@@ -76,7 +76,7 @@ abstract class Chomp() {
 		new Catalog(database.catalog.name, fs, rootDir),
 		database.name
 	)
-
+	
 	def initializeServingVersions() = {
 		servingVersions = databases
 			.map { db => 

@@ -41,6 +41,18 @@ abstract class NodeProtocol {
     }
     .toSet
 
+  def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
+    .nodes
+    .keys
+    .map { n => availableShardsForVersion(n, db, v) }
+    .toList
+    .flatten
+    .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+      (s, x) => s + (x -> (1 + s(x)))
+    } 
+    .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+
+
   def serveVersion(db: Database, version: Option[Long]) {
     chomp.serveVersion(db, version)
   }
@@ -63,16 +75,8 @@ abstract class NodeProtocol {
 
         // TODO: Other cases
         if (versionGroups.contains("equal") && versionGroups.size == 1) {
-          val shardsBelowMinReplication = chomp
-            .nodes
-            .keys
-            .map { n => availableShardsForVersion(n, db, latestLocalDatabaseVersion) }
-            .toList
-            .flatten
-            .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-              (s, x) => s + (x -> (1 + s(x)))
-            }
-            .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+          val shardsBelowMinReplication = 
+            shardsBelowRepFactBeforeUpgrade(db, latestLocalDatabaseVersion)
           
           if (shardsBelowMinReplication.size == 0) {
             serveVersion(db, Some(latestLocalDatabaseVersion))
