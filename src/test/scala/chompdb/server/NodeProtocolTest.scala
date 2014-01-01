@@ -61,7 +61,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         .allLocalShards should be === Set.empty
     }
 
-    "return set of DatabaseVersionShards available locally" in {      
+    "return set of all DatabaseVersionShards available locally" in {      
       // SERVER-SIDE
       db.createVersion(1L)
       db.createEmptyShard(1L)
@@ -72,6 +72,13 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         .nodeProtocol
         .allLocalShards
         .size should be === 2
+    }
+
+    "return set of DatabaseVersionShards available locally for a given Database" in {
+      testChomp.nodeProtocol.localShards(db) should be === Set(
+        DatabaseVersionShard(cat.name, db.name, 1L, 0),
+        DatabaseVersionShard(cat.name, db.name, 1L, 1)
+      )
     }
   }
 }

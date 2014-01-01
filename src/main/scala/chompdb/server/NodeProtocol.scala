@@ -23,6 +23,15 @@ abstract class NodeProtocol {
     }
     .toSet
 
+  def localShards(db: Database): Set[DatabaseVersionShard] = chomp
+    .localDB(db)
+    .versions
+    .flatMap { v => chomp
+      .localDB(db)
+      .retrieveShards(v)
+    }
+    .toSet
+
   def serveVersion(db: Database, version: Option[Long]) {
     chomp.serveVersion(db, version)
   }
