@@ -48,7 +48,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
       case Node("Node1") => None
       case Node("Node2") => Some(2L)
     }
-    
+
     def serveVersion(n: Node, db: Database, v: Long) = true
   }
 
@@ -80,14 +80,6 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
       testChomp
         .nodeProtocol
         .allAvailableShards(mock(classOf[Node])) should be === Set.empty
-    }
-
-    "return set of DatabaseVersionShards that have not been replicated enough times to upgrade" in {
-      testChomp
-        .nodeProtocol
-        .shardsBelowRepFactBeforeUpgrade(db1, 1L) should be === Set(
-          DatabaseVersionShard(cat.name, db1.name, 1L, 2)
-        )
     }
   }
 

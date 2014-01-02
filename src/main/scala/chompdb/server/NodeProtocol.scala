@@ -41,18 +41,18 @@ abstract class NodeProtocol {
     .map { n => (n, availableShardsForVersion(n, db, v)) }
     .toMap  
 
-  def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
-    .nodes
-    .keys
-    .map { n => availableShardsForVersion(n, db, v) }
-    .toList
-    .flatten
-    .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-      (s, x) => s + (x -> (1 + s(x)))
-    } 
-    .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-    .keys
-    .toSet
+  // def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
+  //   .nodes
+  //   .keys
+  //   .map { n => availableShardsForVersion(n, db, v) }
+  //   .toList
+  //   .flatten
+  //   .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+  //     (s, x) => s + (x -> (1 + s(x)))
+  //   } 
+  //   .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+  //   .keys
+  //   .toSet
 
   // SERVER-SIDE
   def allLocalShards(): Set[DatabaseVersionShard] = chomp
@@ -75,6 +75,19 @@ abstract class NodeProtocol {
 
   def serveVersion(db: Database, version: Option[Long]) {
     chomp.serveVersion(db, version)
+  }
+
+  def shardsBelowRepFactBeforeUpgrade(vspn: Map[Node, Set[DatabaseVersionShard]]): Set[DatabaseVersionShard] = {
+    vspn
+      .values
+      .toList
+      .flatten
+      .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+        (s, x) => s + (x -> (1 + s(x)))
+      }
+      .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+      .keys
+      .toSet
   }
 
   /* IN PROGRESS */
@@ -104,16 +117,7 @@ abstract class NodeProtocol {
             val vspn = versionShardsPerNode(db, latestLocalDatabaseVersion)
 
             if (vspn.filter(_._2.size > 0).keys == chomp.nodes.keys) {
-              val shardsBelowMinReplication = vspn
-                .values
-                .toList
-                .flatten
-                .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-                  (s, x) => s + (x -> (1 + s(x)))
-                } 
-                .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-                .keys
-                .toSet
+              val shardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(vspn)
             
               if (shardsBelowMinReplication.size == 0) {
                 serveVersion(db, Some(latestLocalDatabaseVersion))
