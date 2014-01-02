@@ -67,28 +67,37 @@ abstract class NodeProtocol {
       .localDB(db)
       .mostRecentVersion
       .foreach { latestLocalDatabaseVersion =>
-        val versionGroups = latestRemoteVersions(db)
-          .groupBy {
-            case None => "none"
-            case v if (v.get < latestLocalDatabaseVersion) => "older"
-            case v if (v.get == latestLocalDatabaseVersion) => "equal"
-            case _ => "newer"
-          } 
+        // If chomp is not serving db, or if chomp is serving a version of db
+        // that is not the latestLocalDatabaseVersion
+        if (
+          if (chomp.servingVersions.contains(db)) {
+            chomp.servingVersions(db).exists(_ != latestLocalDatabaseVersion)
+          } else false
+        )
+         {
+          val versionGroups = latestRemoteVersions(db)
+            .groupBy {
+              case None => "none"
+              case v if (v.get < latestLocalDatabaseVersion) => "older"
+              case v if (v.get == latestLocalDatabaseVersion) => "equal"
+              case _ => "newer"
+            } 
 
-        // TODO: Other cases
-        if (versionGroups.contains("equal") && versionGroups.size == 1) {
-          val shardsBelowMinReplication = 
-            shardsBelowRepFactBeforeUpgrade(db, latestLocalDatabaseVersion)
-          
-          if (shardsBelowMinReplication.size == 0) {
-            serveVersion(db, Some(latestLocalDatabaseVersion))
+          // TODO: Other cases
+          if (versionGroups.contains("equal") && versionGroups.size == 1) {
+            val shardsBelowMinReplication = 
+              shardsBelowRepFactBeforeUpgrade(db, latestLocalDatabaseVersion)
+            
+            if (shardsBelowMinReplication.size == 0) {
+              serveVersion(db, Some(latestLocalDatabaseVersion))
 
-            chomp
-              .nodes
-              .keys
-              .foreach { n => serveVersion(n, db, latestLocalDatabaseVersion) }
+              chomp
+                .nodes
+                .keys
+                .foreach { n => serveVersion(n, db, latestLocalDatabaseVersion) }
+            }
           }
-        }  
+        }    
       }
 
   }
