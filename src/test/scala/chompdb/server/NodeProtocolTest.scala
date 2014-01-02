@@ -39,7 +39,10 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
   val testChomp = new Chomp {
     val databases = Seq(db)
-    val nodes = Map(Node("Node1") -> Endpoint("Endpoint1"))
+    val nodes = Map(
+      Node("Node1") -> Endpoint("Endpoint1"), 
+      Node("Node2") -> Endpoint("Endpoint2")
+    )
     val nodeProtocolInfo = npi
     val nodeAlive = mock(classOf[NodeAlive])
     val replicationFactor = 1
@@ -52,6 +55,12 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   }
 
   "NodeProtocol" should {
+    "return the latest remote versions for a given database" in {
+      testChomp
+        .nodeProtocol
+        .latestRemoteVersions(db) should be === Set(None)
+    }
+
     "return empty set when no shards exist in any database" in {
       // CLIENT-SIDE
       testChomp

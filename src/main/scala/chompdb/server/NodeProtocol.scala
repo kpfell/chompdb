@@ -51,6 +51,8 @@ abstract class NodeProtocol {
       (s, x) => s + (x -> (1 + s(x)))
     } 
     .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+    .keys
+    .toSet
 
 
   def serveVersion(db: Database, version: Option[Long]) {
