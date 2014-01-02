@@ -32,7 +32,17 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val npi = new NodeProtocolInfo {
     def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
     def availableShards(n: Node, db: Database) = Set[DatabaseVersionShard]()
-    def availableShardsForVersion(n: Node, db: Database, v: Long) = Set[DatabaseVersionShard]()
+    def availableShardsForVersion(n: Node, db: Database, v: Long) = n match {
+      case Node("Node1") => 
+        Set(
+          DatabaseVersionShard(cat.name, db.name, v, 1),
+          DatabaseVersionShard(cat.name, db.name, v, 2)
+        )
+
+      case Node("Node2") =>
+        Set(DatabaseVersionShard(cat.name, db.name, v, 1))
+    }
+    
     def latestVersion(n: Node, db: Database) = None
     def serveVersion(n: Node, db: Database, v: Long) = true
   }
@@ -45,8 +55,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     )
     val nodeProtocolInfo = npi
     val nodeAlive = mock(classOf[NodeAlive])
-    val replicationFactor = 1
-    val replicationBeforeVersionUpgrade = 1
+    val replicationFactor = 2
+    val replicationBeforeVersionUpgrade = 2
     val shardIndex = 0
     val totalShards = 1
     val executor = mock(classOf[ScheduledExecutorService])
@@ -91,6 +101,14 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         DatabaseVersionShard(cat.name, db.name, 1L, 0),
         DatabaseVersionShard(cat.name, db.name, 1L, 1)
       )
+    }
+
+    "return set of DatabaseVersionShards that have not been replicated enough times to upgrade" in {
+      testChomp
+        .nodeProtocol
+        .shardsBelowRepFactBeforeUpgrade(db, 1L) should be === Set(
+          DatabaseVersionShard(cat.name, db.name, 1L, 2)
+        )
     }
   }
 }
