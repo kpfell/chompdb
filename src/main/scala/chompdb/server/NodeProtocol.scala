@@ -39,20 +39,7 @@ abstract class NodeProtocol {
     .nodes
     .keys
     .map { n => (n, availableShardsForVersion(n, db, v)) }
-    .toMap  
-
-  // def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
-  //   .nodes
-  //   .keys
-  //   .map { n => availableShardsForVersion(n, db, v) }
-  //   .toList
-  //   .flatten
-  //   .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-  //     (s, x) => s + (x -> (1 + s(x)))
-  //   } 
-  //   .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-  //   .keys
-  //   .toSet
+    .toMap
 
   // SERVER-SIDE
   def allLocalShards(): Set[DatabaseVersionShard] = chomp
@@ -102,8 +89,7 @@ abstract class NodeProtocol {
           if (chomp.servingVersions.contains(db)) {
             chomp.servingVersions(db).exists(_ != latestLocalDatabaseVersion)
           } else false
-        )
-         {
+        ){
           val versionGroups = latestRemoteVersions(db)
             .groupBy {
               case None => "none"
