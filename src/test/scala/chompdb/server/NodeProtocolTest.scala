@@ -50,6 +50,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     }
 
     def serveVersion(n: Node, db: Database, v: Long) = true
+    def retrieveVersionsServed(n: Node) = Map()
   }
 
   val testChomp = new Chomp {

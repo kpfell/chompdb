@@ -21,6 +21,7 @@ abstract class Chomp() {
 	val rootDir: FileSystem#Dir
 
 	@transient var servingVersions: Map[Database, Option[Long]] = Map()
+	@transient var nodesServingVersions: Map[Node, Map[Database, Option[Long]]] = Map()
 
 	lazy val nodeProtocol = new NodeProtocol {
 		override val chomp = Chomp.this
@@ -30,6 +31,7 @@ abstract class Chomp() {
 		def availableShardsForVersion = nodeProtocolInfo.availableShardsForVersion(_: Node, _: Database, _: Long)
 		def latestVersion = nodeProtocolInfo.latestVersion(_: Node, _: Database)
 		def serveVersion = nodeProtocolInfo.serveVersion(_: Node, _: Database, _: Long)
+		def retrieveVersionsServed = nodeProtocolInfo.retrieveVersionsServed(_: Node)
 	}
 
 	// TODO: numThreads should not be hard set

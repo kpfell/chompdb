@@ -17,6 +17,7 @@ abstract class NodeProtocol {
   def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
   def latestVersion: (Node, Database) => Option[Long]
   def serveVersion: (Node, Database, Long) => Unit
+  def retrieveVersionsServed: Node => Map[Database, Option[Long]]
 
   // TODO: Verify that every node has some shards for this version before
   // this method is run, and that shards meet minimum replication factor
@@ -81,6 +82,14 @@ abstract class NodeProtocol {
       .toSet
   }
 
+  def updateNodesServingVersions() { chomp.nodesServingVersions =
+    chomp
+      .nodes
+      .keys
+      .map { n => (n, retrieveVersionsServed(n)) }
+      .toMap
+  }
+
   /* IN PROGRESS */
   def switchServedVersion(db: Database) {
     chomp
@@ -116,10 +125,10 @@ abstract class NodeProtocol {
         val shardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(vspn)
 
         if (shardsBelowMinReplication.size == 0) {
-          // TODO: Test this
           clusterServeVersion(db, v)
         }
       }
     }
+
   }
 }

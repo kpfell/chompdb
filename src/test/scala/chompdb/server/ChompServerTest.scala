@@ -60,6 +60,8 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
       }
 
       def serveVersion(n: Node, db: Database, v: Long): Boolean = true
+
+      def retrieveVersionsServed(n: Node): Map[Database, Option[Long]] = Map()
     }
     val nodeAlive = mock(classOf[NodeAlive])
     when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)

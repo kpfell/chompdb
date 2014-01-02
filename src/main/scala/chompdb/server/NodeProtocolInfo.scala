@@ -9,4 +9,5 @@ abstract class NodeProtocolInfo {
   def availableShardsForVersion(n: Node, db: Database, v: Long): Set[DatabaseVersionShard]
   def latestVersion(n: Node, db: Database): Option[Long]
   def serveVersion(n: Node, db: Database, v: Long): Boolean
+  def retrieveVersionsServed(n: Node): Map[Database, Option[Long]]
 }
