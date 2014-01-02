@@ -23,6 +23,10 @@ abstract class NodeProtocol {
 
   // TODO: Write test for this
   def clusterServeVersion(db: Database, v: Long) { 
+    // local Chomp
+    serveVersion(db, Some(v))
+
+    // remote Chomps
     chomp
       .nodes
       .keys
@@ -100,20 +104,22 @@ abstract class NodeProtocol {
 
           // TODO: Other cases
           if (versionGroups.contains("equal") && versionGroups.size == 1) {
-            val vspn = versionShardsPerNode(db, latestLocalDatabaseVersion)
-
-            if (vspn.filter(_._2.size > 0).keys == chomp.nodes.keys) {
-              val shardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(vspn)
-            
-              if (shardsBelowMinReplication.size == 0) {
-                serveVersion(db, Some(latestLocalDatabaseVersion))
-                // TODO: Test this
-                clusterServeVersion(db, latestLocalDatabaseVersion)
-              }
-            }
+            migrateClusterToKnownVersion(db, latestLocalDatabaseVersion)
           }
         }    
       }
 
+    def migrateClusterToKnownVersion(db: Database, v: Long) {
+      val vspn = versionShardsPerNode(db, v)
+
+      if (vspn.filter(_._2.size > 0).keys == chomp.nodes.keys) {
+        val shardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(vspn)
+
+        if (shardsBelowMinReplication.size == 0) {
+          // TODO: Test this
+          clusterServeVersion(db, v)
+        }
+      }
+    }
   }
 }
