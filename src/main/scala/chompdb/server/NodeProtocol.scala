@@ -35,6 +35,12 @@ abstract class NodeProtocol {
     .map { n => latestVersion(n, db) }
     .toSet
 
+  def versionShardsPerNode(db: Database, v: Long): Map[Node, Set[DatabaseVersionShard]] = chomp
+    .nodes
+    .keys
+    .map { n => (n, availableShardsForVersion(n, db, v)) }
+    .toMap  
+
   def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
     .nodes
     .keys
@@ -95,13 +101,25 @@ abstract class NodeProtocol {
 
           // TODO: Other cases
           if (versionGroups.contains("equal") && versionGroups.size == 1) {
-            val shardsBelowMinReplication = 
-              shardsBelowRepFactBeforeUpgrade(db, latestLocalDatabaseVersion)
+            val vspn = versionShardsPerNode(db, latestLocalDatabaseVersion)
+
+            if (vspn.filter(_._2.size > 0).keys == chomp.nodes.keys) {
+              val shardsBelowMinReplication = vspn
+                .values
+                .toList
+                .flatten
+                .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+                  (s, x) => s + (x -> (1 + s(x)))
+                } 
+                .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+                .keys
+                .toSet
             
-            if (shardsBelowMinReplication.size == 0) {
-              serveVersion(db, Some(latestLocalDatabaseVersion))
-              // TODO: Test this
-              clusterServeVersion(db, latestLocalDatabaseVersion)
+              if (shardsBelowMinReplication.size == 0) {
+                serveVersion(db, Some(latestLocalDatabaseVersion))
+                // TODO: Test this
+                clusterServeVersion(db, latestLocalDatabaseVersion)
+              }
             }
           }
         }    
