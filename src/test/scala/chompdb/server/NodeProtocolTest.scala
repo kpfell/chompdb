@@ -110,5 +110,13 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
           DatabaseVersionShard(cat.name, db.name, 1L, 2)
         )
     }
+
+    "update the Database version being served" in {
+      testChomp.servingVersions should be === Map()
+
+      testChomp.nodeProtocol.serveVersion(db, Some(1L))
+
+      testChomp.servingVersions should be === Map(db -> Some(1L))
+    }
   }
 }
