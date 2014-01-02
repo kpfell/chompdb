@@ -10,16 +10,42 @@ abstract class NodeProtocol {
   val chomp: Chomp
 
   // CLIENT-SIDE
+
+  // TODO: Write tests for these?
   def allAvailableShards: Node => Set[DatabaseVersionShard]
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
   def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
   def latestVersion: (Node, Database) => Option[Long]
-  def serveVersion: (Node, Database, Long) => Boolean
+  def serveVersion: (Node, Database, Long) => Unit
+
+  // TODO: Verify that every node has some shards for this version before
+  // this method is run, and that shards meet minimum replication factor
+
+  // TODO: Write test for this
+  def clusterServeVersion(db: Database, v: Long) { 
+    chomp
+      .nodes
+      .keys
+      .foreach { n => serveVersion(n, db, v) }
+  }
 
   def latestRemoteVersions(db: Database): Set[Option[Long]] = chomp
     .nodes
     .keys
     .map { n => latestVersion(n, db) }
+    .toSet
+
+  def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
+    .nodes
+    .keys
+    .map { n => availableShardsForVersion(n, db, v) }
+    .toList
+    .flatten
+    .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+      (s, x) => s + (x -> (1 + s(x)))
+    } 
+    .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+    .keys
     .toSet
 
   // SERVER-SIDE
@@ -41,28 +67,12 @@ abstract class NodeProtocol {
     }
     .toSet
 
-  def shardsBelowRepFactBeforeUpgrade(db: Database, v: Long) = chomp
-    .nodes
-    .keys
-    .map { n => availableShardsForVersion(n, db, v) }
-    .toList
-    .flatten
-    .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-      (s, x) => s + (x -> (1 + s(x)))
-    } 
-    .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-    .keys
-    .toSet
-
-
   def serveVersion(db: Database, version: Option[Long]) {
     chomp.serveVersion(db, version)
   }
 
   /* IN PROGRESS */
   def switchServedVersion(db: Database) {
-    // TODO: Need to check that the latest version is not already being served
-    // Determine latest Database version available locally
     chomp
       .localDB(db)
       .mostRecentVersion
@@ -90,11 +100,8 @@ abstract class NodeProtocol {
             
             if (shardsBelowMinReplication.size == 0) {
               serveVersion(db, Some(latestLocalDatabaseVersion))
-
-              chomp
-                .nodes
-                .keys
-                .foreach { n => serveVersion(n, db, latestLocalDatabaseVersion) }
+              // TODO: Test this
+              clusterServeVersion(db, latestLocalDatabaseVersion)
             }
           }
         }    

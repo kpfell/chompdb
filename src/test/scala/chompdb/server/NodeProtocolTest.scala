@@ -27,7 +27,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   }
 
   val cat = Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
-  val db = cat.database("TestDatabase")
+  val db1 = cat.database("TestDatabase1")
+  val db2 = cat.database("TestDatabase2")
 
   val npi = new NodeProtocolInfo {
     def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
@@ -43,12 +44,16 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         Set(DatabaseVersionShard(cat.name, db.name, v, 1))
     }
     
-    def latestVersion(n: Node, db: Database) = None
+    def latestVersion(n: Node, db: Database) = n match {
+      case Node("Node1") => None
+      case Node("Node2") => Some(2L)
+    }
+    
     def serveVersion(n: Node, db: Database, v: Long) = true
   }
 
   val testChomp = new Chomp {
-    val databases = Seq(db)
+    val databases = Seq(db1)
     val nodes = Map(
       Node("Node1") -> Endpoint("Endpoint1"), 
       Node("Node2") -> Endpoint("Endpoint2")
@@ -64,31 +69,40 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     val rootDir = tmpLocalRoot.root
   }
 
-  "NodeProtocol" should {
+  "NodeProtocol client-side" should {
     "return the latest remote versions for a given database" in {
       testChomp
         .nodeProtocol
-        .latestRemoteVersions(db) should be === Set(None)
+        .latestRemoteVersions(db1) should be === Set(None, Some(2L))
     }
 
-    "return empty set when no shards exist in any database" in {
-      // CLIENT-SIDE
+    "return empty set when no remote shards exist for a given database" in {
       testChomp
         .nodeProtocol
         .allAvailableShards(mock(classOf[Node])) should be === Set.empty
+    }
 
-      // SERVER-SIDE
+    "return set of DatabaseVersionShards that have not been replicated enough times to upgrade" in {
+      testChomp
+        .nodeProtocol
+        .shardsBelowRepFactBeforeUpgrade(db1, 1L) should be === Set(
+          DatabaseVersionShard(cat.name, db1.name, 1L, 2)
+        )
+    }
+  }
+
+  "NodeProtocol server-side" should {
+    "return empty set when no shards exist for any local database" in {
       testChomp
         .nodeProtocol
         .allLocalShards should be === Set.empty
     }
 
     "return set of all DatabaseVersionShards available locally" in {      
-      // SERVER-SIDE
-      db.createVersion(1L)
-      db.createEmptyShard(1L)
-      db.createEmptyShard(1L)
-      db.succeedVersion(1L, 2)
+      db1.createVersion(1L)
+      db1.createEmptyShard(1L)
+      db1.createEmptyShard(1L)
+      db1.succeedVersion(1L, 2)
 
       testChomp
         .nodeProtocol
@@ -97,26 +111,24 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     }
 
     "return set of DatabaseVersionShards available locally for a given Database" in {
-      testChomp.nodeProtocol.localShards(db) should be === Set(
-        DatabaseVersionShard(cat.name, db.name, 1L, 0),
-        DatabaseVersionShard(cat.name, db.name, 1L, 1)
+      testChomp.nodeProtocol.localShards(db1) should be === Set(
+        DatabaseVersionShard(cat.name, db1.name, 1L, 0),
+        DatabaseVersionShard(cat.name, db1.name, 1L, 1)
       )
     }
 
-    "return set of DatabaseVersionShards that have not been replicated enough times to upgrade" in {
-      testChomp
-        .nodeProtocol
-        .shardsBelowRepFactBeforeUpgrade(db, 1L) should be === Set(
-          DatabaseVersionShard(cat.name, db.name, 1L, 2)
-        )
-    }
-
-    "update the Database version being served" in {
+    "update the Database version being served locally" in {
       testChomp.servingVersions should be === Map()
 
-      testChomp.nodeProtocol.serveVersion(db, Some(1L))
+      testChomp.nodeProtocol.serveVersion(db1, Some(1L))
 
-      testChomp.servingVersions should be === Map(db -> Some(1L))
+      testChomp.servingVersions should be === Map(db1 -> Some(1L))
+    }
+
+    """|set cluster to serve the latest local version, if that version meets 
+       |minimum replicationFactor requirements and is the newest version
+       |across the cluster""".stripMargin in {
+
     }
   }
 }
