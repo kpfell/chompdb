@@ -6,7 +6,7 @@ import chompdb.Database
 import f1lesystem.LocalFileSystem
 import java.util.concurrent.ScheduledExecutorService
 
-import org.mockito.Mockito.{ mock, when }
+import org.mockito.Mockito.{ mock, verify, when }
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 
@@ -84,8 +84,41 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     val fs = tmpLocalRoot.fs
     val rootDir = tmpLocalRoot.root
   }
+  
+  val testUnitChomp = new Chomp {
+    val databases = Seq(db1)
+    val nodes = Map(
+      Node("Node1") -> Endpoint("Endpoint1"),
+      Node("Node2") -> Endpoint("Endpoint2"),
+      Node("Node3") -> Endpoint("Endpoint3")
+    )
+    val nodeProtocolInfo = mock(classOf[NodeProtocolInfo])
+    val nodeAlive = mock(classOf[NodeAlive])
+    val replicationFactor = 2
+    val replicationBeforeVersionUpgrade = 2
+    val shardIndex = 0
+    val totalShards = 1
+    val executor = mock(classOf[ScheduledExecutorService])
+    val fs = tmpLocalRoot.fs
+    val rootDir = tmpLocalRoot.root
+  }
 
   "NodeProtocol client-side" should {
+    "message every other node in the network to serve a new version" in {
+      testUnitChomp
+        .nodeProtocol
+        .remoteNodesServeVersion(db1, Some(1L))
+
+      verify(testUnitChomp.nodeProtocolInfo)
+        .serveVersion(Node("Node1"), db1, Some(1L))
+
+      verify(testUnitChomp.nodeProtocolInfo)
+        .serveVersion(Node("Node2"), db1, Some(1L))
+
+      verify(testUnitChomp.nodeProtocolInfo)
+        .serveVersion(Node("Node3"), db1, Some(1L))
+    }
+
     "return the latest remote versions for a given database" in {
       testChomp
         .nodeProtocol

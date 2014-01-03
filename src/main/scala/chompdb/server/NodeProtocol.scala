@@ -22,10 +22,7 @@ abstract class NodeProtocol {
 
   // TODO: Verify that every node has some shards for this version before
   // this method is run, and that shards meet minimum replication factor
-
-  // TODO: Write test for this
   def remoteNodesServeVersion(db: Database, v: Option[Long]) { 
-    // remote Chomps
     chomp
       .nodes
       .keys
