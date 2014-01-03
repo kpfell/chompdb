@@ -44,12 +44,14 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         Set(DatabaseVersionShard(cat.name, db.name, v, 1))
     }
     
+    def availableVersions(n: Node, db: Database) = Set()
+
     def latestVersion(n: Node, db: Database) = n match {
       case Node("Node1") => None
       case Node("Node2") => Some(2L)
     }
 
-    def serveVersion(n: Node, db: Database, v: Long) = true
+    def serveVersion(n: Node, db: Database, v: Option[Long]) = true
     def retrieveVersionsServed(n: Node) = Map()
   }
 

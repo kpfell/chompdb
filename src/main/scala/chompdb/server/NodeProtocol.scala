@@ -15,18 +15,16 @@ abstract class NodeProtocol {
   def allAvailableShards: Node => Set[DatabaseVersionShard]
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
   def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
+  def availableVersions: (Node, Database) => Set[Option[Long]]
   def latestVersion: (Node, Database) => Option[Long]
-  def serveVersion: (Node, Database, Long) => Unit
+  def serveVersion: (Node, Database, Option[Long]) => Unit
   def retrieveVersionsServed: Node => Map[Database, Option[Long]]
 
   // TODO: Verify that every node has some shards for this version before
   // this method is run, and that shards meet minimum replication factor
 
   // TODO: Write test for this
-  def clusterServeVersion(db: Database, v: Long) { 
-    // local Chomp
-    serveVersion(db, Some(v))
-
+  def remoteNodesServeVersion(db: Database, v: Option[Long]) { 
     // remote Chomps
     chomp
       .nodes
@@ -90,12 +88,15 @@ abstract class NodeProtocol {
       .toMap
   }
 
+  // If enough nodes have the latest version, and we're not serving the latest
+  // version, then broadcast move to latest version
+
   /* IN PROGRESS */
   def switchServedVersion(db: Database) {
     chomp
       .localDB(db)
       .mostRecentVersion
-      .foreach { latestLocalDatabaseVersion =>
+      .foreach { latestLocalDatabaseVersion => // (1)
         // If chomp is not serving db, or if chomp is serving a version of db
         // that is not the latestLocalDatabaseVersion
         if (
@@ -103,32 +104,47 @@ abstract class NodeProtocol {
             chomp.servingVersions(db).exists(_ != latestLocalDatabaseVersion)
           } else false
         ){
-          val versionGroups = latestRemoteVersions(db)
-            .groupBy {
-              case None => "none"
-              case v if (v.get < latestLocalDatabaseVersion) => "older"
-              case v if (v.get == latestLocalDatabaseVersion) => "equal"
-              case _ => "newer"
-            } 
+          
+          val nodesWithVersionShards = versionShardsPerNode(db, latestLocalDatabaseVersion)
 
-          // TODO: Other cases
-          if (versionGroups.contains("equal") && versionGroups.size == 1) {
-            migrateClusterToKnownVersion(db, latestLocalDatabaseVersion)
+          val numShardsBelowMinReplication = nodesWithVersionShards
+            .values
+            .toList
+            .flatten
+            .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
+              (s, x) => s + (x -> (1 + s(x)))
+            }
+            .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
+            .size
+
+          if (numShardsBelowMinReplication != 0) {
+            serveVersion(db, Some(latestLocalDatabaseVersion))
+            remoteNodesServeVersion(db, Some(latestLocalDatabaseVersion))
           }
+
+          // val nodesAvailableVersions = chomp
+          //   .nodes
+          //   .keys
+          //   .map { n => availableVersions(n, db) }
+          //   .toMap
+
+          // nodesAvailableVersions
+          //   .filter(_)
+
+          // val versionGroups = latestRemoteVersions(db)
+          //   .groupBy {
+          //     case None => "none"
+          //     case v if (v.get < latestLocalDatabaseVersion) => "older"
+          //     case v if (v.get == latestLocalDatabaseVersion) => "equal"
+          //     case _ => "newer"
+          //   } 
+
+          // // TODO: Other cases
+          // if (versionGroups.contains("equal") && versionGroups.size == 1) {
+          //   migrateClusterToKnownVersion(db, latestLocalDatabaseVersion)
+          // }
         }    
       }
-
-    def migrateClusterToKnownVersion(db: Database, v: Long) {
-      val vspn = versionShardsPerNode(db, v)
-
-      if (vspn.filter(_._2.size > 0).keys == chomp.nodes.keys) {
-        val shardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(vspn)
-
-        if (shardsBelowMinReplication.size == 0) {
-          clusterServeVersion(db, v)
-        }
-      }
-    }
 
   }
 }

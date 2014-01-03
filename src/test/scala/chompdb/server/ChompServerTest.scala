@@ -53,13 +53,15 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
         )
       }
 
+      def availableVersions(n: Node, db: Database) = Set()
+
       def latestVersion(n: Node, db: Database): Option[Long] = {
         if (db.name == "TbiDatabase1") Some(1L)
         else if (db.name == "TbiDatabase2") Some(2L)
         else None
       }
 
-      def serveVersion(n: Node, db: Database, v: Long): Boolean = true
+      def serveVersion(n: Node, db: Database, v: Option[Long]): Boolean = true
 
       def retrieveVersionsServed(n: Node): Map[Database, Option[Long]] = Map()
     }
