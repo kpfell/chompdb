@@ -88,11 +88,6 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			testChomp.getNewVersionNumber(testDatabase) should be === Some(2L)
 		}
 
-		// TODO: Write another test case for when a version DOES exist locally
-		"determine whether a version exists locally" in {
-			testChomp.versionExists(testDatabase, 1L) should be === false
-		}
-
 		"download a database version from a secondary FileSystem" in {
 			// Write files to "remote" root directory
 			trait TestShardedStore extends ShardedWriter {

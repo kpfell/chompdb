@@ -99,12 +99,8 @@ abstract class Chomp() {
 
 	def updateDatabase(database: Database) {
 		getNewVersionNumber(database) foreach { version => 
-			if (!versionExists(database, version))
+			if (!localDB(database).versionExists(version))
 				downloadDatabaseVersion(database, version)
 		}
-	}
-
-	def versionExists(database: Database, version: Long): Boolean = {
-		(rootDir /+ database.catalog.name /+ database.name /+ version.toString).exists
 	}
 }
