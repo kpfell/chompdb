@@ -41,11 +41,16 @@ abstract class Chomp() {
 
 		val remoteDir = database.versionPath(version)
 
-		val localDB = Chomp.this.localDB(database)
-		val localDir = localDB.createVersion(version)
+		// TODO: This "fails" silently if the version does not exist.
+		if (database.versionMarker(version).exists) {
+			val localDB = Chomp.this.localDB(database)
+			val localDir = localDB.createVersion(version)
 
-		copyShards(remoteDir, localDir)
-		copyVersionFile(database.versionMarker(version), localDB.root)
+			// TODO: This causes problems with NodeProtocol.serveVersion, for example, if
+			// the version fails to transfer completely
+			copyShards(remoteDir, localDir)
+			copyVersionFile(database.versionMarker(version), localDB.root)
+		}
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
 			for (file <- remoteVersionDir.listFiles) {

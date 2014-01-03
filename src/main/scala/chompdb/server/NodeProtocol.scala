@@ -64,7 +64,22 @@ abstract class NodeProtocol {
     .toSet
 
   def serveVersion(db: Database, version: Option[Long]) {
-    chomp.serveVersion(db, version)
+    // Verify that the version is available locally
+    val versionAvailable =
+      if (version.isEmpty) true
+      else chomp
+        .localDB(db)
+        .versionExists(version.get)
+
+    // If so, serve the version
+    // If not, initiate a download of the version
+    // If the version fails to download, do not begin serving that version
+    if (versionAvailable) chomp.serveVersion(db, version)
+    else {
+      chomp.downloadDatabaseVersion(db, version.get)
+      if (chomp.localDB(db).versionExists(version.get)) 
+        chomp.serveVersion(db, version)
+    }
   }
 
   def shardsBelowRepFactBeforeUpgrade(vspn: Map[Node, Set[DatabaseVersionShard]]): Set[DatabaseVersionShard] = {
@@ -121,28 +136,6 @@ abstract class NodeProtocol {
             serveVersion(db, Some(latestLocalDatabaseVersion))
             remoteNodesServeVersion(db, Some(latestLocalDatabaseVersion))
           }
-
-          // val nodesAvailableVersions = chomp
-          //   .nodes
-          //   .keys
-          //   .map { n => availableVersions(n, db) }
-          //   .toMap
-
-          // nodesAvailableVersions
-          //   .filter(_)
-
-          // val versionGroups = latestRemoteVersions(db)
-          //   .groupBy {
-          //     case None => "none"
-          //     case v if (v.get < latestLocalDatabaseVersion) => "older"
-          //     case v if (v.get == latestLocalDatabaseVersion) => "equal"
-          //     case _ => "newer"
-          //   } 
-
-          // // TODO: Other cases
-          // if (versionGroups.contains("equal") && versionGroups.size == 1) {
-          //   migrateClusterToKnownVersion(db, latestLocalDatabaseVersion)
-          // }
         }    
       }
 

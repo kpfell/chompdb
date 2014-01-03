@@ -82,6 +82,9 @@ trait VersionedStore {
     }
   }
 
+  def versionExists(version: Long): Boolean = versions.contains(version)
+
+
   def versionMarker(version: Long) = root / (version.toString + versionSuffix)
 
   def parseVersion(p: FileSystem#Path): Option[Long] = {

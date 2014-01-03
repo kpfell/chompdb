@@ -26,9 +26,22 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     }
   }
 
-  val cat = Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
-  val db1 = cat.database("TestDatabase1")
-  val db2 = cat.database("TestDatabase2")
+  val tmpRemoteRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "remote"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }
+
+  val catLocal = Catalog("TestCatalog1", tmpLocalRoot.fs, tmpLocalRoot.root)
+  val catRemote = Catalog("TestCatalog2", tmpRemoteRoot.fs, tmpRemoteRoot.root)
+  val db1 = catLocal.database("TestDatabase1")
+  val db2 = catRemote.database("TestDatabase2")
 
   val npi = new NodeProtocolInfo {
     def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
@@ -36,12 +49,12 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     def availableShardsForVersion(n: Node, db: Database, v: Long) = n match {
       case Node("Node1") => 
         Set(
-          DatabaseVersionShard(cat.name, db.name, v, 1),
-          DatabaseVersionShard(cat.name, db.name, v, 2)
+          DatabaseVersionShard(db.catalog.name, db.name, v, 1),
+          DatabaseVersionShard(db.catalog.name, db.name, v, 2)
         )
 
       case Node("Node2") =>
-        Set(DatabaseVersionShard(cat.name, db.name, v, 1))
+        Set(DatabaseVersionShard(db.catalog.name, db.name, v, 1))
     }
     
     def availableVersions(n: Node, db: Database) = Set()
@@ -107,23 +120,20 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
     "return set of DatabaseVersionShards available locally for a given Database" in {
       testChomp.nodeProtocol.localShards(db1) should be === Set(
-        DatabaseVersionShard(cat.name, db1.name, 1L, 0),
-        DatabaseVersionShard(cat.name, db1.name, 1L, 1)
+        DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 0),
+        DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 1)
       )
     }
 
-    "update the Database version being served locally" in {
-      testChomp.servingVersions should be === Map()
+    "update the Database version being served locally, when the version has already been downloaded" in {
+      testChomp.servingVersions should be === Map.empty
 
-      testChomp.nodeProtocol.serveVersion(db1, Some(1L))
+      db1.createVersion(3L)
+      db1.succeedVersion(3L, 0)
 
-      testChomp.servingVersions should be === Map(db1 -> Some(1L))
-    }
+      testChomp.nodeProtocol.serveVersion(db1, Some(3L))
 
-    """|set cluster to serve the latest local version, if that version meets 
-       |minimum replicationFactor requirements and is the newest version
-       |across the cluster""".stripMargin in {
-
+      testChomp.servingVersions should be === Map(db1 -> Some(3L))
     }
   }
 }
