@@ -29,12 +29,6 @@ abstract class NodeProtocol {
       .foreach { n => serveVersion(n, db, v) }
   }
 
-  // def mostRecentRemoteVersions(db: Database): Set[Option[Long]] = chomp
-  //   .nodes
-  //   .keys
-  //   .map { n => mostRecentRemoteVersion(n, db) }
-  //   .toSet
-
   def versionShardsPerNode(db: Database, v: Long): Map[Node, Set[DatabaseVersionShard]] = chomp
     .nodes
     .keys
@@ -119,15 +113,7 @@ abstract class NodeProtocol {
           
           val nodesWithVersionShards = versionShardsPerNode(db, latestLocalDatabaseVersion)
 
-          val numShardsBelowMinReplication = nodesWithVersionShards
-            .values
-            .toList
-            .flatten
-            .foldLeft(Map[DatabaseVersionShard, Int]() withDefaultValue 0){
-              (s, x) => s + (x -> (1 + s(x)))
-            }
-            .filter(_._2 < chomp.replicationBeforeVersionUpgrade)
-            .size
+          val numShardsBelowMinReplication = shardsBelowRepFactBeforeUpgrade(nodesWithVersionShards).size
 
           if (numShardsBelowMinReplication != 0) {
             serveVersion(db, Some(latestLocalDatabaseVersion))
