@@ -119,12 +119,6 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         .serveVersion(Node("Node3"), db1, Some(1L))
     }
 
-    "return the latest remote versions for a given database" in {
-      testChomp
-        .nodeProtocol
-        .latestRemoteVersions(db1) should be === Set(None, Some(2L))
-    }
-
     "return empty set when no remote shards exist for a given database" in {
       testChomp
         .nodeProtocol
@@ -134,7 +128,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     // "return a map of Nodes to DatabaseVersionShards available for a given database and version" in {
     //   testChomp
     //     .nodeProtocol
-    //     .latestRemoteVersions()
+    //     .versionShardsPerNode()
     // }
   }
 

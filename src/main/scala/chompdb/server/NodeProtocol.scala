@@ -29,11 +29,11 @@ abstract class NodeProtocol {
       .foreach { n => serveVersion(n, db, v) }
   }
 
-  def latestRemoteVersions(db: Database): Set[Option[Long]] = chomp
-    .nodes
-    .keys
-    .map { n => mostRecentRemoteVersion(n, db) }
-    .toSet
+  // def mostRecentRemoteVersions(db: Database): Set[Option[Long]] = chomp
+  //   .nodes
+  //   .keys
+  //   .map { n => mostRecentRemoteVersion(n, db) }
+  //   .toSet
 
   def versionShardsPerNode(db: Database, v: Long): Map[Node, Set[DatabaseVersionShard]] = chomp
     .nodes
