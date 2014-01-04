@@ -130,6 +130,12 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         .nodeProtocol
         .allAvailableShards(mock(classOf[Node])) should be === Set.empty
     }
+
+    // "return a map of Nodes to DatabaseVersionShards available for a given database and version" in {
+    //   testChomp
+    //     .nodeProtocol
+    //     .latestRemoteVersions()
+    // }
   }
 
   "NodeProtocol server-side" should {

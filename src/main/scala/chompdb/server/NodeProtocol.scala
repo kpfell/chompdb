@@ -16,7 +16,7 @@ abstract class NodeProtocol {
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
   def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
   def availableVersions: (Node, Database) => Set[Option[Long]]
-  def latestVersion: (Node, Database) => Option[Long]
+  def mostRecentRemoteVersion: (Node, Database) => Option[Long]
   def serveVersion: (Node, Database, Option[Long]) => Unit
   def retrieveVersionsServed: Node => Map[Database, Option[Long]]
 
@@ -32,7 +32,7 @@ abstract class NodeProtocol {
   def latestRemoteVersions(db: Database): Set[Option[Long]] = chomp
     .nodes
     .keys
-    .map { n => latestVersion(n, db) }
+    .map { n => mostRecentRemoteVersion(n, db) }
     .toSet
 
   def versionShardsPerNode(db: Database, v: Long): Map[Node, Set[DatabaseVersionShard]] = chomp
