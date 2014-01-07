@@ -54,9 +54,14 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
 	val testChomp = new Chomp {
 		val databases = Seq(testDatabase)
-		val nodes = Map(Node("Node1") -> Endpoint("Endpoint1"))
+		val nodes = Map(
+			Node("Node1") -> Endpoint("Endpoint1"),
+			Node("Node2") -> Endpoint("Endpoint2")
+		)
 		val nodeProtocolInfo = mock(classOf[NodeProtocolInfo])
 		val nodeAlive = mock(classOf[NodeAlive])
+		when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
+		when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
 		val replicationFactor = 1
 		val replicationBeforeVersionUpgrade = 1
 		val shardIndex = 0
@@ -178,6 +183,17 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			testChomp.initializeServingVersions()
 
 			testChomp.servingVersions(testDatabase) should be === Some(2L)
+		}
+
+		"update the internal map of nodes alive" in {
+			testChomp.nodesAlive should be === Map.empty
+
+			testChomp.updateNodesAlive()
+
+			testChomp.nodesAlive should be === Map(
+				Node("Node1") -> true,
+				Node("Node2") -> false
+			)
 		}
 
 	}

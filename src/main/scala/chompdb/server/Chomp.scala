@@ -5,6 +5,7 @@ import chompdb.store.VersionedStore
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
+import scala.collection._
 
 // object Chomp {
 // 	class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
@@ -30,7 +31,10 @@ abstract class Chomp() {
 	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
 
 	@transient var servingVersions/*: Map[Database, Option[Long]]*/ = Map.empty[Database, Option[Long]]
-	@transient var nodesServingVersions: Map[Node, Map[Database, Option[Long]]] = Map()
+	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
+
+	@transient var nodesAlive = Map.empty[Node, Boolean]
+	@transient var nodesContent = Map.empty[Node, Set[DatabaseVersionShard]]
 
 	lazy val nodeProtocol = new NodeProtocol {
 		override val chomp = Chomp.this
@@ -107,5 +111,23 @@ abstract class Chomp() {
 			if (!localDB(database).versionExists(version))
 				downloadDatabaseVersion(database, version)
 		}
+	}
+
+	def updateNodesAlive() {
+		nodesAlive = nodes
+			.keys
+			.map( n => n -> nodeAlive.isAlive(n) )(breakOut)
+	}
+
+	def updateNodesContent() {
+		nodesContent = nodes
+			.keys
+			.map { n => n -> databases
+				.map { db => nodeProtocol.availableShards(n, db) }
+				.flatten
+				.toSet
+			}
+			.toMap
+
 	}
 }
