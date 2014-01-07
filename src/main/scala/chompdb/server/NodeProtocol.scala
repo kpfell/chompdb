@@ -12,9 +12,8 @@ abstract class NodeProtocol {
   // CLIENT-SIDE
 
   // TODO: Write tests for these?
-  def allAvailableShards: Node => Set[DatabaseVersionShard]
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
-  def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
+  // def availableShardsForVersion: (Node, Database, Long) => Set[DatabaseVersionShard]
   def availableVersions: (Node, Database) => Set[Option[Long]]
   def mostRecentRemoteVersion: (Node, Database) => Option[Long]
   def serveVersion: (Node, Database, Option[Long]) => Unit
@@ -32,7 +31,8 @@ abstract class NodeProtocol {
   def versionShardsPerNode(db: Database, v: Long): Map[Node, Set[DatabaseVersionShard]] = chomp
     .nodes
     .keys
-    .map { n => (n, availableShardsForVersion(n, db, v)) }
+    .map { n => (n, 
+      availableShards(n, db).filter(_.version == v)) }
     .toMap
 
   // SERVER-SIDE

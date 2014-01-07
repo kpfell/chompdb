@@ -6,6 +6,14 @@ import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
 
+// object Chomp {
+// 	class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
+// 		def availableShards(database: Database): Set[DatabaseVersionShard] = {
+// 			chomp.availableShards filter(_.database == database)
+// 		}
+// 	}
+// }
+
 abstract class Chomp() {
 	val databases: Seq[Database]
 	val nodes: Map[Node, Endpoint] 
@@ -27,7 +35,6 @@ abstract class Chomp() {
 	lazy val nodeProtocol = new NodeProtocol {
 		override val chomp = Chomp.this
 
-		def allAvailableShards = nodeProtocolInfo.allAvailableShards(_: Node)
 		def availableShards = nodeProtocolInfo.availableShards(_: Node, _: Database)
 		def availableShardsForVersion = nodeProtocolInfo.availableShardsForVersion(_: Node, _: Database, _: Long)
 		def availableVersions = nodeProtocolInfo.availableVersions(_: Node, _: Database)

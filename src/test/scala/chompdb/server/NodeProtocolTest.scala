@@ -44,8 +44,19 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val db2 = catRemote.database("TestDatabase2")
 
   val npi = new NodeProtocolInfo {
-    def allAvailableShards(n: Node) = Set[DatabaseVersionShard]()
-    def availableShards(n: Node, db: Database) = Set[DatabaseVersionShard]()
+    def availableShards(n: Node, db: Database) = n match {
+      case Node("Node1") => Set(
+        DatabaseVersionShard(db.catalog.name, db.name, 5L, 1),
+        DatabaseVersionShard(db.catalog.name, db.name, 7L, 1),
+        DatabaseVersionShard(db.catalog.name, db.name, 1L, 1),
+        DatabaseVersionShard(db.catalog.name, db.name, 1L, 2)
+      )
+
+      case Node("Node2") => Set(
+        DatabaseVersionShard(db.catalog.name, db.name, 1L, 1)
+      )
+    }
+
     def availableShardsForVersion(n: Node, db: Database, v: Long) = n match {
       case Node("Node1") => 
         Set(
@@ -117,12 +128,6 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
       verify(testUnitChomp.nodeProtocolInfo)
         .serveVersion(Node("Node3"), db1, Some(1L))
-    }
-
-    "return empty set when no remote shards exist for a given database" in {
-      testChomp
-        .nodeProtocol
-        .allAvailableShards(mock(classOf[Node])) should be === Set.empty
     }
 
     "return a map of Nodes to DatabaseVersionShards available for a given database and version" in {

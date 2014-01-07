@@ -24,25 +24,21 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
     }
   }
 
+  val cat = new Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
+  val db1 = cat.database("TestDatabase1")
+  val db2 = cat.database("TestDatabase2")
+
   val testChomp = new Chomp {
-    val databases = Seq(mock(classOf[Database])) // Need to reimplement nodeProtocolInfo if this is implemented
+    // val databases = Seq(mock(classOf[Database])) // Need to reimplement nodeProtocolInfo if this is implemented
+    val databases = Seq(db1)
     val nodes = Map(Node("Node1") -> Endpoint("endpoint1"), 
       Node("Node2") -> Endpoint("endpoint2"))
     val nodeProtocolInfo = new NodeProtocolInfo {
-      def allAvailableShards(n: Node): Set[DatabaseVersionShard] = {
-        Set(
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 1),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 2),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase2", 2L, 1)
-        )
-      }
-
       def availableShards(n: Node, db: Database): Set[DatabaseVersionShard] = {
         Set(
           DatabaseVersionShard(db.catalog.name, db.name, 1L, 1),
           DatabaseVersionShard(db.catalog.name, db.name, 1L, 2),
-          DatabaseVersionShard(db.catalog.name, db.name, 2L, 1),
-          DatabaseVersionShard(db.catalog.name, db.name, 2L, 2)
+          DatabaseVersionShard(db2.catalog.name, db2.name, 2L, 1)
         )
       }
 
@@ -100,14 +96,14 @@ class ChompServerTest extends WordSpec with ShouldMatchers {
 
       chompServer.nodesContent should be === Map(
         Node("Node1") -> Set(
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 1),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 2),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase2", 2L, 1)
+          DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 1),
+          DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 2),
+          DatabaseVersionShard(db2.catalog.name, db2.name, 2L, 1)
         ),
         Node("Node2") -> Set(
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 1),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase1", 1L, 2),
-          DatabaseVersionShard("TbiCatalog", "TbiDatabase2", 2L, 1)
+          DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 1),
+          DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 2),
+          DatabaseVersionShard(db2.catalog.name, db2.name, 2L, 1)
         )
       )
     }

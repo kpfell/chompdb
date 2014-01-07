@@ -20,6 +20,13 @@ abstract class ChompServer {
     nodesContent = chomp
       .nodes
       .keys
-      .map( n => n -> chomp.nodeProtocol.allAvailableShards(n) )(breakOut)
+      .map( n => n -> 
+        chomp
+          .databases 
+          .map { db => chomp.nodeProtocol.availableShards(n, db) }
+          .flatten
+          .toSet
+      )
+      .toMap
   }
 }
