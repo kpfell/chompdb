@@ -1,8 +1,7 @@
 package chompdb.server
 
+import chompdb._
 import chompdb.store.VersionedStore
-import chompdb.Catalog
-import chompdb.Database
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
@@ -20,7 +19,9 @@ abstract class Chomp() {
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 
-	@transient var servingVersions: Map[Database, Option[Long]] = Map()
+	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
+
+	@transient var servingVersions/*: Map[Database, Option[Long]]*/ = Map.empty[Database, Option[Long]]
 	@transient var nodesServingVersions: Map[Node, Map[Database, Option[Long]]] = Map()
 
 	lazy val nodeProtocol = new NodeProtocol {
