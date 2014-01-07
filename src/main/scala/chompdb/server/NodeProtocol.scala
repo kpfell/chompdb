@@ -14,7 +14,6 @@ abstract class NodeProtocol {
   // TODO: Write tests for these?
   def availableShards: (Node, Database) => Set[DatabaseVersionShard]
   def availableVersions: (Node, Database) => Set[Option[Long]]
-  def mostRecentRemoteVersion: (Node, Database) => Option[Long]
   def serveVersion: (Node, Database, Option[Long]) => Unit
   def retrieveVersionsServed: Node => Map[Database, Option[Long]]
 
