@@ -69,7 +69,11 @@ class ChompTest extends WordSpec with ShouldMatchers {
 		override val fs = tmpLocalRoot.fs
 		override val rootDir = tmpLocalRoot.root
 
-		def nodeProtocol = Map(Node("Node1") -> mock(classOf[NodeProtocol]))
+		val mockedNodeProtocol = mock(classOf[NodeProtocol])
+		when(mockedNodeProtocol.availableShards(testDatabase.catalog.name, testDatabase.name))
+			.thenReturn(Set((1L, 0), (1L, 1), (2L, 0), (2L, 1)))
+
+		def nodeProtocol = Map(Node("Node1") -> mockedNodeProtocol, Node("Node2") -> mockedNodeProtocol)
 	}
 
 	"Chomp" should {
@@ -209,6 +213,27 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			testChomp.nodesAlive should be === Map(
 				Node("Node1") -> true,
 				Node("Node2") -> false
+			)
+		}
+
+		"update the internal map of nodes' content" in {
+			testChomp.nodesContent should be === Map.empty[Node, Set[DatabaseVersionShard]]
+
+			testChomp.updateNodesContent()
+
+			testChomp.nodesContent should be === Map(
+				Node("Node1") -> Set(
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)					
+				),
+				Node("Node2") -> Set(
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
+					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)
+				)
 			)
 		}
 

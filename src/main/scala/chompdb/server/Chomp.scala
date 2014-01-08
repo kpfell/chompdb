@@ -141,6 +141,5 @@ abstract class Chomp() {
 				.toSet
 			}
 			.toMap
-
 	}
 }
