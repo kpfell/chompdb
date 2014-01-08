@@ -72,6 +72,15 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
       vs.mostRecentVersion should be === Some(3L)
     }
 
+    "return the shard numbers for a given version" in {
+      vs.createVersion(4L)
+      createEmptyShard(vs, 4L)
+      createEmptyShard(vs, 4L)
+      createEmptyShard(vs, 4L)
+
+      vs.shardNumsOfVersion(4L) should be === Set(0, 1, 2)
+    }
+
     "cleanup older versions" in {
       vs.succeedVersion(1L, 1)
       vs.succeedVersion(2L, 1)

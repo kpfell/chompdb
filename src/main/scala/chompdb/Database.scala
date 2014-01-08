@@ -9,7 +9,6 @@ class Database(
   val catalog: Catalog,
   val name: String
 ) {
-
   val versionedStore = new VersionedStore {
     override val fs = catalog.fs
     override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: Remove cast
