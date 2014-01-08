@@ -8,7 +8,7 @@ import chompdb.store.VersionedStore
 class Database(
   val catalog: Catalog,
   val name: String
-) /* extends VersionedStore */ {
+) {
 
   val versionedStore = new VersionedStore {
     override val fs = catalog.fs
@@ -20,16 +20,7 @@ class Database(
   }
 
   def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionedStore
-    .versionPath(version)
-    .listFiles
-    .filter(_.extension == "blob")
-    .map { blobFile =>
-      DatabaseVersionShard(
-        catalog.name,
-        name,
-        version,
-        blobFile.basename.toInt
-      )
-    }
-    .toSet  
+    .shardNumsOfVersion(version)
+    .map { shardNum => DatabaseVersionShard(catalog.name, name, version, shardNum) }
+
 }

@@ -1,5 +1,6 @@
 package chompdb.store
 
+import chompdb.Database
 import chompdb.DatabaseVersionShard
 
 import f1lesystem.FileSystem
@@ -28,6 +29,12 @@ trait VersionedStore {
     .map(_.filename)
     .filter(_.endsWith(".blob"))
     .size
+
+  def shardNumsOfVersion(version: Long): Set[Int] = versionPath(version)
+    .listFiles
+    .filter(_.extension == "blob")
+    .map { _.basename.toInt }
+    .toSet
 
   def lastShardNum(version: Long): Option[Int] = {
     versionPath(version)
