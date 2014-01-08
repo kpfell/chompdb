@@ -63,9 +63,9 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
       val c = Catalog("catalog1", tmpRoot.fs, remoteDir)
       val d = c.database("database1")
       val version = System.currentTimeMillis // timestamp
-      val versionPath = d.createVersion(version)
+      val versionPath = d.versionedStore.createVersion(version)
       copyShards(writers, versionPath)
-      d.succeedVersion(version, writers(0).shardsTotal)
+      d.versionedStore.succeedVersion(version, writers(0).shardsTotal)
       
       def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
         for (w <- writers) {

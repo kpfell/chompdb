@@ -27,15 +27,15 @@ class DatabaseTest extends WordSpec with ShouldMatchers {
   val cat = Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
   val db1 = cat.database("TestDatabase1")
 
-  db1.createVersion(1L)
+  db1.versionedStore.createVersion(1L)
 
   "Database" should {
     "return the number of the last DatabaseVersionShard, if any" in {
-      db1.lastShardNum(1L).getOrElse(false) should be === false
+      db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === false
 
       createEmptyShard(db1, 1L)
 
-      db1.lastShardNum(1L).getOrElse(false) should be === 0
+      db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === 0
     }
 
     "return the set of DatabaseVersionShards for a given Database version number" in {

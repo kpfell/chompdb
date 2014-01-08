@@ -45,12 +45,16 @@ class ChompTest extends WordSpec with ShouldMatchers {
 	val testDatabase = testCatalog.database("TestDatabase")
 	
 	val testVersion1 = 1L
-	val testVersion1Path = testDatabase.createVersion(testVersion1)
-	testDatabase.succeedVersion(1L, 1)
+	val testVersion1Path = testDatabase
+		.versionedStore
+		.createVersion(testVersion1)
+	testDatabase.versionedStore.succeedVersion(1L, 1)
 
 	val testVersion2 = 2L
-	val testVersion2Path = testDatabase.createVersion(testVersion2)
-	testDatabase.succeedVersion(2L, 1)	
+	val testVersion2Path = testDatabase
+		.versionedStore
+		.createVersion(testVersion2)
+	testDatabase.versionedStore.succeedVersion(2L, 1)	
 
 	val testChomp = new Chomp {
 		override val databases = Seq(testDatabase)
@@ -130,6 +134,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString).exists should be === true
 			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion1.toString + ".version")).exists should be === true
 			(0 until testDatabase
+				.versionedStore
 				.versionPath(testVersion1)
 				.listFiles
 				.filter(_.extension == "blob")
@@ -171,6 +176,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString).exists should be === true
 			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion2.toString + ".version")).exists should be === true
 			(0 until testDatabase
+				.versionedStore
 				.versionPath(testVersion1)
 				.listFiles
 				.filter(_.extension == "blob")

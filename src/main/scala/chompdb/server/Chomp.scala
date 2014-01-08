@@ -50,17 +50,17 @@ abstract class Chomp() {
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val numThreads = 5
 
-		val remoteDir = database.versionPath(version)
+		val remoteDir = database.versionedStore.versionPath(version)
 
 		// TODO: This "fails" silently if the version does not exist.
-		if (database.versionMarker(version).exists) {
+		if (database.versionedStore.versionMarker(version).exists) {
 			val localDB = Chomp.this.localDB(database)
-			val localDir = localDB.createVersion(version)
+			val localDir = localDB.versionedStore.createVersion(version)
 
 			// TODO: This causes problems with NodeProtocol.serveVersion, for example, if
 			// the version fails to transfer completely
 			copyShards(remoteDir, localDir)
-			copyVersionFile(database.versionMarker(version), localDB.root)
+			copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
 		}
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
@@ -81,9 +81,10 @@ abstract class Chomp() {
 	}
 
 	def getNewVersionNumber(database: Database): Option[Long] = database
+		.versionedStore
 		.mostRecentVersion
 		.flatMap { latestRemoteVersion => 
-			localDB(database).mostRecentVersion match {
+			localDB(database).versionedStore.mostRecentVersion match {
 				case Some(latestLocalVersion) =>
 					if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
 					else None
@@ -98,7 +99,9 @@ abstract class Chomp() {
 	
 	def initializeAvailableShards() {
 		availableShards = databases
-			.map { db => db.versions map { v => db.shardsOfVersion(v) } }
+			.map { db => db.versionedStore.versions 
+				.map { v => db.shardsOfVersion(v) } 
+			}
 			.toSet
 			.flatten
 			.flatten
@@ -107,7 +110,7 @@ abstract class Chomp() {
 	def initializeServingVersions() {
 		servingVersions = databases
 			.map { db => 
-				(db, localDB(db).mostRecentVersion) 
+				(db, localDB(db).versionedStore.mostRecentVersion) 
 			}
 			.toMap
 	}
@@ -118,7 +121,7 @@ abstract class Chomp() {
 
 	def updateDatabase(database: Database) {
 		getNewVersionNumber(database) foreach { version => 
-			if (!localDB(database).versionExists(version))
+			if (!localDB(database).versionedStore.versionExists(version))
 				downloadDatabaseVersion(database, version)
 		}
 	}

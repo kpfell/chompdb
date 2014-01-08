@@ -8,24 +8,19 @@ import chompdb.store.VersionedStore
 class Database(
   val catalog: Catalog,
   val name: String
-) extends VersionedStore {
-  override val fs = catalog.fs
-  override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: Remove cast
+) /* extends VersionedStore */ {
+
+  val versionedStore = new VersionedStore {
+    override val fs = catalog.fs
+    override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: Remove cast
+  }
 
   override def equals(other: Any) = other match {
     case d: Database => (d.catalog == catalog) && (d.name == name)
   }
 
-  def lastShardNum(version: Long): Option[Int] = {
-    versionPath(version)
-      .listFiles
-      .filter(_.extension == "blob")
-      .filter(_.basename forall Character.isDigit)
-      .map { f => f.basename.toInt }
-      .reduceLeftOption(_ max _)
-  }
-
-  def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionPath(version)
+  def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionedStore
+    .versionPath(version)
     .listFiles
     .filter(_.extension == "blob")
     .map { blobFile =>
@@ -36,5 +31,5 @@ class Database(
         blobFile.basename.toInt
       )
     }
-    .toSet
+    .toSet  
 }

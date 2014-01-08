@@ -10,13 +10,13 @@ object TestUtils {
   def byteArrayToString(b: Array[Byte]): String = new String(b, FileSystem.UTF8)
 
   def createEmptyShard(database: Database, version: Long) {
-    val filename = database.lastShardNum(version) match{
+    val filename = database.versionedStore.lastShardNum(version) match{
       case None => 0.toString 
       case Some(s) => (s + 1).toString
     }
 
-    val blobFile = database.root /+ version.toString / (filename + ".blob")
-    val indexFile = database.root /+ version.toString / (filename + ".index")
+    val blobFile = database.versionedStore.root /+ version.toString / (filename + ".blob")
+    val indexFile = database.versionedStore.root /+ version.toString / (filename + ".index")
 
     blobFile.touch()
     indexFile.touch()

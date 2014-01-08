@@ -30,8 +30,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
   val cat1 = new Catalog("Catalog1", tmpLocalRoot.fs, tmpLocalRoot.root)
   val db1 = cat1.database("Database1")
-  db1.createVersion(1L)
-  db1.succeedVersion(1L, 3)
+  db1.versionedStore.createVersion(1L)
+  db1.versionedStore.succeedVersion(1L, 3)
   
   createEmptyShard(db1, 1L)
   createEmptyShard(db1, 1L)
