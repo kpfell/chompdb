@@ -33,7 +33,7 @@ class DatabaseTest extends WordSpec with ShouldMatchers {
     "return the number of the last DatabaseVersionShard, if any" in {
       db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === false
 
-      createEmptyShard(db1, 1L)
+      createEmptyShard(db1.versionedStore, 1L)
 
       db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === 0
     }

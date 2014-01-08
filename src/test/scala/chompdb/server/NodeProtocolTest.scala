@@ -33,9 +33,9 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   db1.versionedStore.createVersion(1L)
   db1.versionedStore.succeedVersion(1L, 3)
   
-  createEmptyShard(db1, 1L)
-  createEmptyShard(db1, 1L)
-  createEmptyShard(db1, 1L)
+  createEmptyShard(db1.versionedStore, 1L)
+  createEmptyShard(db1.versionedStore, 1L)
+  createEmptyShard(db1.versionedStore, 1L)
 
   val node1 = Node("Node1")
   val node2 = Node("Node2")
