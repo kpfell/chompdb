@@ -25,7 +25,7 @@ class Database(
       .reduceLeftOption(_ max _)
   }
 
-  def retrieveShards(version: Long): Set[DatabaseVersionShard] = versionPath(version)
+  def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionPath(version)
     .listFiles
     .filter(_.extension == "blob")
     .map { blobFile =>

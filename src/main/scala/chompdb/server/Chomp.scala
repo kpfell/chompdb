@@ -98,7 +98,7 @@ abstract class Chomp() {
 	
 	def initializeAvailableShards() {
 		availableShards = databases
-			.map { db => db.versions map { v => db.retrieveShards(v) } }
+			.map { db => db.versions map { v => db.shardsOfVersion(v) } }
 			.toSet
 			.flatten
 			.flatten
