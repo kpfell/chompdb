@@ -10,6 +10,8 @@ import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class DatabaseTest extends WordSpec with ShouldMatchers {
+  import TestUtils.lastShardNum
+
   val testName = "DatabaseTest"
 
   val tmpLocalRoot = new LocalFileSystem.TempRoot {
@@ -31,11 +33,11 @@ class DatabaseTest extends WordSpec with ShouldMatchers {
 
   "Database" should {
     "return the number of the last DatabaseVersionShard, if any" in {
-      db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === false
+      lastShardNum(db1.versionedStore, 1L).getOrElse(false) should be === false
 
       createEmptyShard(db1.versionedStore, 1L)
 
-      db1.versionedStore.lastShardNum(1L).getOrElse(false) should be === 0
+      lastShardNum(db1.versionedStore, 1L).getOrElse(false) should be === 0
     }
 
     "return the set of DatabaseVersionShards for a given Database version number" in {

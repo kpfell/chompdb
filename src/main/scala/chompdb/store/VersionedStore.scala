@@ -28,16 +28,7 @@ trait VersionedStore {
     .listFiles
     .filter(_.extension == "blob")
     .map { _.basename.toInt }
-    .toSet
-
-  def lastShardNum(version: Long): Option[Int] = {
-    versionPath(version)
-      .listFiles
-      .filter(_.extension == "blob")
-      .filter(_.basename forall Character.isDigit)
-      .map { f => f.basename.toInt }
-      .reduceLeftOption(_ max _)
-  } 
+    .toSet 
 
   def createVersion(version: Long = System.currentTimeMillis): fs.Dir = {
     if (versions contains version) throw new RuntimeException("Version already exists")

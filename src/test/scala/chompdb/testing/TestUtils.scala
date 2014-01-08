@@ -10,7 +10,7 @@ object TestUtils {
   def byteArrayToString(b: Array[Byte]): String = new String(b, FileSystem.UTF8)
 
   def createEmptyShard(versionedStore: VersionedStore, version: Long) {
-    val filename = versionedStore.lastShardNum(version) match{
+    val filename = lastShardNum(versionedStore, version) match {
       case None => 0.toString 
       case Some(s) => (s + 1).toString
     }
@@ -20,5 +20,14 @@ object TestUtils {
 
     blobFile.touch()
     indexFile.touch()
+  }
+
+  def lastShardNum(versionedStore: VersionedStore, version: Long): Option[Int] = {
+    versionedStore
+      .versionPath(version)
+      .listFiles
+      .filter { f => f.extension == "blob" && (f.basename forall Character.isDigit) }
+      .map { f => f.basename.toInt }
+      .reduceLeftOption(_ max _)
   }
 }
