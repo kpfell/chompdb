@@ -29,6 +29,11 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
   val cat1 = new Catalog("Catalog1", tmpLocalRoot.fs, tmpLocalRoot.root)
   val db1 = cat1.database("Database1")
+  db1.createVersion(1L)
+  db1.succeedVersion(1L, 3)
+  db1.createEmptyShard(1L)
+  db1.createEmptyShard(1L)
+  db1.createEmptyShard(1L)
 
   val node1 = Node("Node1")
   val node2 = Node("Node2")
@@ -41,22 +46,35 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   }
 
   val chomps: Set[(Node, Chomp)] = allNodes
-    .zipWithIndex
-    .map { nodeAndIndex =>
-      nodeAndIndex._1 -> new Chomp {
+    .map { node =>
+      node -> new Chomp {
         override val databases = Seq(db1)
         override val nodes = allNodes map { n => (n, Endpoint("Endpoint" + n.id takeRight 1)) } toMap
         override val nodeAlive = mock(classOf[NodeAlive])
         override val replicationFactor = 1
         override val replicationBeforeVersionUpgrade = 1
         override val shardIndex = 0
-        override val totalShards = 1
+        override val totalShards = 3
         override val executor = mock(classOf[ScheduledExecutorService])
         override val fs = tmpLocalRoot.fs
-        override val rootDir = tmpLocalRoot.root /+ ("Chomp" + nodeAndIndex._2.toString)
+        override val rootDir = tmpLocalRoot.root /+ ("Chomp" + (node.id takeRight 1).toString)
 
         override def nodeProtocol = nodeProtocols
     }
+  }
+
+  chomps foreach { nodeAndChomp => nodeAndChomp._2.initializeAvailableShards() }
+
+  "LocalNodeProtocol" should {
+    "return the set of VersionShards available for a node, given a catalog name and database name" in {
+      chomps foreach { clientNodeAndChomp => 
+        chomps foreach { serverNodeAndChomp => 
+          val nodeProtocol = clientNodeAndChomp._2.nodeProtocol(serverNodeAndChomp._1)
+          nodeProtocol.availableShards(db1.catalog.name, db1.name) should be === Set((1L, 0), (1L, 1), (1L, 2))
+        }
+      }
+    }
+
   }
 
 }

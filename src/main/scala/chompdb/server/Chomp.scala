@@ -96,7 +96,15 @@ abstract class Chomp() {
 		database.name
 	)
 	
-	def initializeServingVersions() = {
+	def initializeAvailableShards() {
+		availableShards = databases
+			.map { db => db.versions map { v => db.retrieveShards(v) } }
+			.toSet
+			.flatten
+			.flatten
+	}
+
+	def initializeServingVersions() {
 		servingVersions = databases
 			.map { db => 
 				(db, localDB(db).mostRecentVersion) 

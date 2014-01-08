@@ -53,21 +53,21 @@ class ChompTest extends WordSpec with ShouldMatchers {
 	testDatabase.succeedVersion(2L, 1)	
 
 	val testChomp = new Chomp {
-		val databases = Seq(testDatabase)
-		val nodes = Map(
+		override val databases = Seq(testDatabase)
+		override val nodes = Map(
 			Node("Node1") -> Endpoint("Endpoint1"),
 			Node("Node2") -> Endpoint("Endpoint2")
 		)
-		val nodeAlive = mock(classOf[NodeAlive])
+		override val nodeAlive = mock(classOf[NodeAlive])
 		when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
 		when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
-		val replicationFactor = 1
-		val replicationBeforeVersionUpgrade = 1
-		val shardIndex = 0
-		val totalShards = 1
-		val executor = mock(classOf[ScheduledExecutorService])
-		val fs = tmpLocalRoot.fs
-		val rootDir = tmpLocalRoot.root
+		override val replicationFactor = 1
+		override val replicationBeforeVersionUpgrade = 1
+		override val shardIndex = 0
+		override val totalShards = 1
+		override val executor = mock(classOf[ScheduledExecutorService])
+		override val fs = tmpLocalRoot.fs
+		override val rootDir = tmpLocalRoot.root
 
 		def nodeProtocol = Map(Node("Node1") -> mock(classOf[NodeProtocol]))
 	}
@@ -102,7 +102,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
 			def newShardedWriter(f: ShardedWriter => Unit) = {
 				val store = new TestShardedStore {
-					val shardsTotal = 5
+					val shardsTotal = 2
 					val writers = 1
 					val writerIndex = 0
 				}
@@ -143,7 +143,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
 			def newShardedWriter(f: ShardedWriter => Unit) = {
 				val store = new TestShardedStore {
-					val shardsTotal = 5
+					val shardsTotal = 2
 					val writers = 1
 					val writerIndex = 0
 				}
@@ -174,6 +174,21 @@ class ChompTest extends WordSpec with ShouldMatchers {
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.index").exists should be === true
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.blob").exists should be === true
 			}
+		}
+
+		"initialize the set of DatabaseVersionShards available locally" in {
+			testChomp.initializeAvailableShards()
+
+			testChomp.availableShards.size should be === 4
+
+			testChomp.availableShards should be === Set(
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),	
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)							
+			)
+
+			// testChomp.availableShards should be === Set((1L, 0), (1L, 1), (2L, 0), (2L, 1))
 		}
 
 		"update a database version being served" in {
