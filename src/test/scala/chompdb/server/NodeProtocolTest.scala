@@ -2,6 +2,7 @@ package chompdb.server
 
 import chompdb._
 import chompdb.server._
+import chompdb.testing.TestUtils.createEmptyShard
 
 import f1lesystem.LocalFileSystem
 
@@ -31,9 +32,10 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val db1 = cat1.database("Database1")
   db1.createVersion(1L)
   db1.succeedVersion(1L, 3)
-  db1.createEmptyShard(1L)
-  db1.createEmptyShard(1L)
-  db1.createEmptyShard(1L)
+  
+  createEmptyShard(db1, 1L)
+  createEmptyShard(db1, 1L)
+  createEmptyShard(db1, 1L)
 
   val node1 = Node("Node1")
   val node2 = Node("Node2")

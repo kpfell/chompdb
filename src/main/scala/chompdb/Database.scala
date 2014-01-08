@@ -16,20 +16,6 @@ class Database(
     case d: Database => (d.catalog == catalog) && (d.name == name)
   }
 
-  /* Primarily for testing purposes */
-  def createEmptyShard(version: Long) {
-    val filename = lastShardNum(version) match {
-      case None => 0.toString
-      case Some(s) => (s + 1).toString
-    }
-
-    val blobFile = root /+ version.toString / (filename + ".blob")
-    val indexFile = root /+ version.toString / (filename + ".index")
-
-    blobFile.touch()
-    indexFile.touch()
-  }
-
   def lastShardNum(version: Long): Option[Int] = {
     versionPath(version)
       .listFiles

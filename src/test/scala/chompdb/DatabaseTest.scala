@@ -1,7 +1,9 @@
 package chompdb
 
 import chompdb._
+import chompdb.testing._
 import f1lesystem.LocalFileSystem
+import chompdb.testing.TestUtils.createEmptyShard
 
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
@@ -24,28 +26,16 @@ class DatabaseTest extends WordSpec with ShouldMatchers {
 
   val cat = Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
   val db1 = cat.database("TestDatabase1")
-  val db2 = cat.database("TestDatabase2")
 
   db1.createVersion(1L)
-  db2.createVersion(1L)
 
   "Database" should {
-    "create an empty shard blob and index file" in {
-      db1.versionPath(1L).listFiles should be === Seq.empty
-
-      db1.createEmptyShard(1L)
-
-      db1.versionPath(1L).listFiles.size should be === 2
-      (db1.versionPath(1L) / "0.blob").exists should be === true
-      (db1.versionPath(1L) / "0.index").exists should be === true
-    }
-
     "return the number of the last DatabaseVersionShard, if any" in {
-      db2.lastShardNum(1L).getOrElse(false) should be === false
+      db1.lastShardNum(1L).getOrElse(false) should be === false
 
-      db2.createEmptyShard(1L)
+      createEmptyShard(db1, 1L)
 
-      db2.lastShardNum(1L).getOrElse(false) should be === 0
+      db1.lastShardNum(1L).getOrElse(false) should be === 0
     }
 
     "return the set of DatabaseVersionShards for a given Database version number" in {
