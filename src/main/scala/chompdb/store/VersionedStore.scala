@@ -24,12 +24,6 @@ trait VersionedStore {
 
   def mostRecentVersion: Option[Long] = versions.headOption
 
-  def countShardsInVersion(version: Long): Int = versionPath(version)
-    .listFiles
-    .map(_.filename)
-    .filter(_.endsWith(".blob"))
-    .size
-
   def shardNumsOfVersion(version: Long): Set[Int] = versionPath(version)
     .listFiles
     .filter(_.extension == "blob")

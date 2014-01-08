@@ -15,6 +15,7 @@ import org.scalatest.OneInstancePerTest
 class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePerTest {
   import TestUtils.stringToByteArray
   import TestUtils.byteArrayToString
+  import TestUtils.createEmptyShard
 
   "VersionedStore" should {
 
@@ -75,11 +76,12 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
       vs.succeedVersion(1L, 1)
       vs.succeedVersion(2L, 1)
       vs.succeedVersion(3L, 1)
+      vs.succeedVersion(4L, 3)
 
       vs.cleanup(versionsToKeep = 2)
 
-      vs.versions should be === Seq(3L, 2L)
-      vs.mostRecentVersion should be === Some(3L)
+      vs.versions should be === Seq(4L, 3L)
+      vs.mostRecentVersion should be === Some(4L)
     }
   }
 }
