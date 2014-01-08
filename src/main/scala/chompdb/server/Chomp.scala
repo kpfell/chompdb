@@ -7,18 +7,26 @@ import f1lesystem.FileSystem
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection._
 
-// object Chomp {
-// 	class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
-// 		def availableShards(database: Database): Set[DatabaseVersionShard] = {
-// 			chomp.availableShards filter(_.database == database)
-// 		}
-// 	}
-// }
+object Chomp {
+	class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
+  	override def availableShards(catalog: String, database: String): Set[VersionShard] =
+			chomp
+				.availableShards
+				.filter(_.database == database)
+				.map { dbvs => (dbvs.version, dbvs.shard) }
+
+		override def serveVersion(catalog: String, database: String, version: Long) {
+			chomp
+				.databases
+				.find(_.name == database)
+				.foreach { db => chomp.serveVersion(db, Some(version))}
+		}
+	}
+}
 
 abstract class Chomp() {
 	val databases: Seq[Database]
 	val nodes: Map[Node, Endpoint] 
-	val nodeProtocolInfo: NodeProtocolInfo
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
@@ -36,13 +44,7 @@ abstract class Chomp() {
 	@transient var nodesAlive = Map.empty[Node, Boolean]
 	@transient var nodesContent = Map.empty[Node, Set[DatabaseVersionShard]]
 
-	lazy val nodeProtocol = new NodeProtocol {
-		override val chomp = Chomp.this
-
-		def availableShards = nodeProtocolInfo.availableShards(_: Node, _: Database)
-		def serveVersion = nodeProtocolInfo.serveVersion(_: Node, _: Database, _: Option[Long])
-		def retrieveVersionsServed = nodeProtocolInfo.retrieveVersionsServed(_: Node)
-	}
+	def nodeProtocol: Map[Node, NodeProtocol]
 
 	// TODO: numThreads should not be hard set
 	def downloadDatabaseVersion(database: Database, version: Long) = {
@@ -123,7 +125,10 @@ abstract class Chomp() {
 		nodesContent = nodes
 			.keys
 			.map { n => n -> databases
-				.map { db => nodeProtocol.availableShards(n, db) }
+				.map { db => nodeProtocol(n)
+					.availableShards(db.catalog.name, db.name)
+					.map { vs => DatabaseVersionShard(db.catalog.name, db.name, vs._1, vs._2) } 
+				}
 				.flatten
 				.toSet
 			}

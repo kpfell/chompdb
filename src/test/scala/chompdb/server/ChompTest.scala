@@ -58,7 +58,6 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			Node("Node1") -> Endpoint("Endpoint1"),
 			Node("Node2") -> Endpoint("Endpoint2")
 		)
-		val nodeProtocolInfo = mock(classOf[NodeProtocolInfo])
 		val nodeAlive = mock(classOf[NodeAlive])
 		when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
 		when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
@@ -69,6 +68,8 @@ class ChompTest extends WordSpec with ShouldMatchers {
 		val executor = mock(classOf[ScheduledExecutorService])
 		val fs = tmpLocalRoot.fs
 		val rootDir = tmpLocalRoot.root
+
+		def nodeProtocol = Map(Node("Node1") -> mock(classOf[NodeProtocol]))
 	}
 
 	"Chomp" should {
