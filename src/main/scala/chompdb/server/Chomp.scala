@@ -46,6 +46,12 @@ abstract class Chomp() {
 
 	def nodeProtocol: Map[Node, NodeProtocol]
 
+	def main(args: Array[String]) {
+		initializeAvailableShards()
+		purgeInconsistentShards()
+		initializeServingVersions()
+	}
+
 	// TODO: numThreads should not be hard set
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val numThreads = 5
@@ -123,6 +129,22 @@ abstract class Chomp() {
 			.toSet
 			.flatten
 			.flatten
+	}
+
+	def purgeInconsistentShards() {
+		def isInconsistentShard(db: Database, v: Long, f: FileSystem#File): Boolean = {
+			(f.extension == "blob" || f.extension == "index") && 
+				!(db.versionedStore.versionPath(v) / (f.basename + ".shard")).exists
+		}
+
+		databases
+			.map { db => db.versionedStore.versions
+				.map { v => db.versionedStore.versionPath(v)
+					.listFiles
+					.filter { f => isInconsistentShard(db, v, f) }
+					.foreach { f => f.delete() }
+				}
+			}
 	}
 
 	def initializeServingVersions() {
