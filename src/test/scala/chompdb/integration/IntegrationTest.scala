@@ -71,7 +71,12 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
         for (w <- writers) {
           for (baseFile <- w.shardFiles) {
             copy(baseFile.indexFile, versionDir / baseFile.indexFile.filename)
+
             copy(baseFile.blobFile,  versionDir / baseFile.blobFile.filename)
+
+            if ((versionDir / baseFile.indexFile.filename).exists && 
+                (versionDir / baseFile.blobFile.filename).exists)
+              d.versionedStore.succeedShard(version, baseFile.baseFile.basename.toInt)
           }
         }
       }
@@ -88,6 +93,7 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
       (0 until 20) foreach { n =>
         (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.index").exists should be === true
         (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.blob").exists should be === true
+        (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.shard").exists should be === true
       }
     }
   }

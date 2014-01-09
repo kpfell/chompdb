@@ -89,6 +89,14 @@ class ChompTest extends WordSpec with ShouldMatchers {
 			testChomp.servingVersions should be === Map(testDatabase -> None)
 		}
 
+		"initialize the set of DatabaseVersionShards available locally" in {
+			testChomp.availableShards should be === Set.empty[DatabaseVersionShard]
+
+			testChomp.initializeAvailableShards()
+
+			testChomp.availableShards should be === Set.empty[DatabaseVersionShard]
+		}		
+
 		"create a local Database for a given database" in {
 			val db = testChomp.localDB(testDatabase)
 
@@ -137,11 +145,17 @@ class ChompTest extends WordSpec with ShouldMatchers {
 				.versionedStore
 				.versionPath(testVersion1)
 				.listFiles
-				.filter(_.extension == "blob")
+				.filter(_.extension == "shard")
 				.size) foreach { n => 
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.index").exists should be === true
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.blob").exists should be === true
+				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.shard").exists should be === true
 			}
+
+			testChomp.availableShards should be === Set(
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
+				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1)						
+			)
 		}
 
 		"download the latest database version" in {
@@ -179,17 +193,12 @@ class ChompTest extends WordSpec with ShouldMatchers {
 				.versionedStore
 				.versionPath(testVersion1)
 				.listFiles
-				.filter(_.extension == "blob")
+				.filter(_.extension == "shard")
 				.size) foreach { n => 
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.index").exists should be === true
 				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.blob").exists should be === true
+				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.shard").exists should be === true
 			}
-		}
-
-		"initialize the set of DatabaseVersionShards available locally" in {
-			testChomp.initializeAvailableShards()
-
-			testChomp.availableShards.size should be === 4
 
 			testChomp.availableShards should be === Set(
 				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
@@ -197,8 +206,6 @@ class ChompTest extends WordSpec with ShouldMatchers {
 				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
 				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)							
 			)
-
-			// testChomp.availableShards should be === Set((1L, 0), (1L, 1), (2L, 0), (2L, 1))
 		}
 
 		"update a database version being served" in {

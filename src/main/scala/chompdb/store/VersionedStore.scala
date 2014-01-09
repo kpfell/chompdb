@@ -27,7 +27,7 @@ trait VersionedStore {
 
   def shardNumsOfVersion(version: Long): Set[Int] = versionPath(version)
     .listFiles
-    .filter(_.extension == "blob")
+    .filter(_.extension == "shard")
     .map { _.basename.toInt }
     .toSet 
 

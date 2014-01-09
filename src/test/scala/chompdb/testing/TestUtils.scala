@@ -28,7 +28,7 @@ object TestUtils {
     versionedStore
       .versionPath(version)
       .listFiles
-      .filter { f => f.extension == "blob" && (f.basename forall Character.isDigit) }
+      .filter { f => f.extension == "shard" && (f.basename forall Character.isDigit) }
       .map { f => f.basename.toInt }
       .reduceLeftOption(_ max _)
   }

@@ -77,11 +77,10 @@ abstract class Chomp() {
 				val indexFile = remoteVersionDir / (basename + ".index")
 				copy(indexFile, localVersionDir / indexFile.filename)
 
-				if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists) {
-					database.versionedStore.succeedShard(version, basename.toInt)
-				}
+				if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists)
+					Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
 
-				if (database.versionedStore.shardMarker(version, basename.toInt).exists) {
+				if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists) {
 					availableShards = availableShards + 
 						DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
 				}
