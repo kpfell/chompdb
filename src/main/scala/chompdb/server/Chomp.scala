@@ -80,6 +80,11 @@ abstract class Chomp() {
 				if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists) {
 					database.versionedStore.succeedShard(version, basename.toInt)
 				}
+
+				if (database.versionedStore.shardMarker(version, basename.toInt).exists) {
+					availableShards = availableShards + 
+						DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
+				}
 			}
 		}
 
