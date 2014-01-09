@@ -17,9 +17,11 @@ object TestUtils {
 
     val blobFile = versionedStore.root /+ version.toString / (filename + ".blob")
     val indexFile = versionedStore.root /+ version.toString / (filename + ".index")
+    val shardMarkerFile = versionedStore.root /+ version.toString / (filename + ".shard")
 
     blobFile.touch()
     indexFile.touch()
+    shardMarkerFile.touch()
   }
 
   def lastShardNum(versionedStore: VersionedStore, version: Long): Option[Int] = {
