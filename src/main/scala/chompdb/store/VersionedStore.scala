@@ -8,6 +8,7 @@ import java.io._
 import java.util.Properties
 
 object VersionedStore {
+  val shardSuffix = ".shard"
   val versionSuffix = ".version"
 }
 
@@ -41,6 +42,10 @@ trait VersionedStore {
   def deleteVersion(version: Long) {
     versionPath(version).deleteRecursively()
     versionMarker(version).delete()
+  }
+
+  def succeedShard(version: Long, shard: Int) {
+    shardMarker(version, shard).touch()
   }
 
   def succeedVersion(version: Long, shardsTotal: Int) {
@@ -86,6 +91,8 @@ trait VersionedStore {
   }
 
   def versionExists(version: Long): Boolean = versions.contains(version)
+
+  def shardMarker(version: Long, shard: Int) = root /+ version.toString / (shard.toString + shardSuffix)
 
   def versionMarker(version: Long) = root / (version.toString + versionSuffix)
 

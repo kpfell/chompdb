@@ -19,7 +19,7 @@ object Chomp {
 			chomp
 				.databases
 				.find(_.name == database)
-				.foreach { db => chomp.serveVersion(db, Some(version))}
+				.foreach { db => chomp.serveVersion(db, Some(version)) }
 		}
 	}
 }
@@ -64,8 +64,22 @@ abstract class Chomp() {
 		}
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
-			for (file <- remoteVersionDir.listFiles) {
-				copy(file, localVersionDir / file.filename)
+			val remoteBasenames = remoteVersionDir
+				.listFiles
+				.map { _.basename }
+				.filter { _ forall Character.isDigit }
+				.toSet
+
+			for (basename <- remoteBasenames) {
+				val blobFile = remoteVersionDir / (basename + ".blob")
+				copy(blobFile, localVersionDir / blobFile.filename)
+
+				val indexFile = remoteVersionDir / (basename + ".index")
+				copy(indexFile, localVersionDir / indexFile.filename)
+
+				if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists) {
+					database.versionedStore.succeedShard(version, basename.toInt)
+				}
 			}
 		}
 
