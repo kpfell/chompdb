@@ -41,7 +41,7 @@ class DatabaseTest extends WordSpec with ShouldMatchers {
     }
 
     "return the set of DatabaseVersionShards for a given Database version number" in {
-      db1.shardsOfVersion(1L).size should be === 1
+      db1.shardsOfVersion(1L) should be === Set(DatabaseVersionShard(db1.catalog.name, db1.name, 1L, 0))
     }
   }
 }

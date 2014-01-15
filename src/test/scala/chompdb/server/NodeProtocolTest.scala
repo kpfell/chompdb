@@ -30,12 +30,12 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
 
   val cat1 = new Catalog("Catalog1", tmpLocalRoot.fs, tmpLocalRoot.root)
   val db1 = cat1.database("Database1")
-  db1.versionedStore.createVersion(1L)
-  db1.versionedStore.succeedVersion(1L, 3)
   
+  db1.versionedStore.createVersion(1L)
   createEmptyShard(db1.versionedStore, 1L)
   createEmptyShard(db1.versionedStore, 1L)
   createEmptyShard(db1.versionedStore, 1L)
+  db1.versionedStore.succeedVersion(1L, 3)
 
   val node1 = Node("Node1")
   val node2 = Node("Node2")
@@ -59,7 +59,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val totalShards = 3
         override val executor = mock(classOf[ScheduledExecutorService])
         override val fs = tmpLocalRoot.fs
-        override val rootDir = tmpLocalRoot.root /+ ("Chomp" + (node.id takeRight 1).toString)
+        override val rootDir = tmpLocalRoot.root /* /+ ("Chomp" + (node.id takeRight 1).toString)*/
 
         override def nodeProtocol = nodeProtocols
     }

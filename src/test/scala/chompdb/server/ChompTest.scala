@@ -2,7 +2,7 @@ package chompdb.server
 
 import chompdb._
 import chompdb.store._
-import chompdb.testing._
+import chompdb.testing.TestUtils.createEmptyShard
 import f1lesystem.LocalFileSystem
 import java.util.concurrent.ScheduledExecutorService
 
@@ -12,243 +12,199 @@ import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompTest extends WordSpec with ShouldMatchers {
-	import TestUtils.stringToByteArray
-	import TestUtils.byteArrayToString
+  val testName = "ChompTest"
 
-	val testName = "ChompTest"
+  val tmpLocalRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "local"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }
 
-	val tmpLocalRoot = new LocalFileSystem.TempRoot {
-		override val rootName = "local"
-		override lazy val root: fs.Dir = {
-			val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-			if (tmp.exists) {
-				tmp.deleteRecursively()
-			}
-			tmp.mkdir()
-			tmp
-		}
-	}	
+  val tmpRemoteRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "remote"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }
 
-	val tmpRemoteRoot = new LocalFileSystem.TempRoot {
-		override val rootName = "remote"
-		override lazy val root: fs.Dir = {
-			val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-			if (tmp.exists) {
-				tmp.deleteRecursively()
-			}
-			tmp.mkdir()
-			tmp
-		}
-	}
+  val catalog1 = Catalog("Catalog1", tmpRemoteRoot.fs, tmpRemoteRoot.root)
+  val database1 = catalog1.database("Database1")
 
-	val testCatalog = Catalog("TestCatalog", tmpRemoteRoot.fs, tmpRemoteRoot.root)
-	val testDatabase = testCatalog.database("TestDatabase")
-	
-	val testVersion1 = 1L
-	val testVersion1Path = testDatabase
-		.versionedStore
-		.createVersion(testVersion1)
-	testDatabase.versionedStore.succeedVersion(1L, 1)
+  val mockedProtocol1 = mock(classOf[NodeProtocol])
+  when(mockedProtocol1.availableShards(database1.catalog.name, database1.name))
+    .thenReturn(Set((1L, 0), (1L, 1)))
 
-	val testVersion2 = 2L
-	val testVersion2Path = testDatabase
-		.versionedStore
-		.createVersion(testVersion2)
-	testDatabase.versionedStore.succeedVersion(2L, 1)	
+  val mockedProtocol2 = mock(classOf[NodeProtocol])
+  when(mockedProtocol2.availableShards(database1.catalog.name, database1.name))
+    .thenReturn(Set((1L, 0), (2L, 0)))
 
-	val testChomp = new Chomp {
-		override val databases = Seq(testDatabase)
-		override val nodes = Map(
-			Node("Node1") -> Endpoint("Endpoint1"),
-			Node("Node2") -> Endpoint("Endpoint2")
-		)
-		override val nodeAlive = mock(classOf[NodeAlive])
-		when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
-		when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
-		override val replicationFactor = 1
-		override val replicationBeforeVersionUpgrade = 1
-		override val shardIndex = 0
-		override val totalShards = 1
-		override val executor = mock(classOf[ScheduledExecutorService])
-		override val fs = tmpLocalRoot.fs
-		override val rootDir = tmpLocalRoot.root
+  val chomp = new Chomp {
+    override val databases = Seq(database1)
+    override val nodes = Map(
+      Node("Node1") -> Endpoint("Endpoint1"),
+      Node("Node2") -> Endpoint("Endpoint2")
+    )
+    override val nodeProtocol = Map(
+      Node("Node1") -> mockedProtocol1,
+      Node("Node2") -> mockedProtocol2
+    )
+    override val nodeAlive = mock(classOf[NodeAlive])
+    when(nodeAlive.isAlive(Node("Node1"))).thenReturn(true)
+    when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
+    override val replicationFactor = 1
+    override val replicationBeforeVersionUpgrade = 1
+    override val shardIndex = 0
+    override val totalShards = 1
+    override val executor = mock(classOf[ScheduledExecutorService])
+    override val fs = tmpLocalRoot.fs
+    override val rootDir = tmpLocalRoot.root
+  }
 
-		val mockedNodeProtocol = mock(classOf[NodeProtocol])
-		when(mockedNodeProtocol.availableShards(testDatabase.catalog.name, testDatabase.name))
-			.thenReturn(Set((1L, 0), (1L, 1), (2L, 0), (2L, 1)))
+  "Chomp" should {
+    /* main method */
 
-		def nodeProtocol = Map(Node("Node1") -> mockedNodeProtocol, Node("Node2") -> mockedNodeProtocol)
-	}
+    "given a database, reference a local version of that database" in {
+      val database1Local = chomp.localDB(database1)
 
-	"Chomp" should {
-		"initialize the map of Database versions being served" in {
-			testChomp.servingVersions should be === Map()
+      database1Local.catalog.name should be === database1.catalog.name
+      database1Local.name should be === database1.name
+      database1Local.catalog.fs should be === chomp.fs
+      database1Local.catalog.base should be === chomp.rootDir
+    }
 
-			testChomp.initializeServingVersions()
+    "initialize the set of available shards, if there are no shards available" in {
+      chomp.availableShards should be === Set.empty[DatabaseVersionShard]
+      chomp.initializeAvailableShards()
+      chomp.availableShards should be === Set.empty[DatabaseVersionShard]
+    }
 
-			testChomp.servingVersions should be === Map(testDatabase -> None)
-		}
+    "initialize the set of available shards" in {
+      val database1Local = chomp.localDB(database1)
 
-		"initialize the set of DatabaseVersionShards available locally" in {
-			testChomp.availableShards should be === Set.empty[DatabaseVersionShard]
+      database1Local.versionedStore.createVersion(1L)
 
-			testChomp.initializeAvailableShards()
+      createEmptyShard(database1Local.versionedStore, 1L)
+      createEmptyShard(database1Local.versionedStore, 1L)
 
-			testChomp.availableShards should be === Set.empty[DatabaseVersionShard]
-		}		
+      database1Local.versionedStore.succeedVersion(1L, 2)
 
-		"create a local Database for a given database" in {
-			val db = testChomp.localDB(testDatabase)
+      chomp.initializeAvailableShards()
 
-			db.name should be === testDatabase.name
-			db.catalog.name should be === testDatabase.catalog.name
-			db.catalog.fs should be === testChomp.fs
-			db.catalog.base should be === testChomp.rootDir
-		}
+      chomp.availableShards should be === Set(
+        DatabaseVersionShard(database1.catalog.name, database1.name, 1L, 0),
+        DatabaseVersionShard(database1.catalog.name, database1.name, 1L, 1)
+      )
+    }
 
-		"retrieve the latest version to download, if any" in {
-			testChomp.getNewVersionNumber(testDatabase) should be === Some(2L)
-		}
+    "purge inconsistent shards within the Chomp's filesystem" in {
+      val path = chomp.localDB(database1).versionedStore.versionPath(1L)
+      val blobFilePath = path / "2.blob"
+      val indexFilePath = path / "4.index"
 
-		"download a database version from a secondary FileSystem" in {
-			// Write files to "remote" root directory
-			trait TestShardedStore extends ShardedWriter {
-				override val baseDir = testVersion1Path
-			}
+      blobFilePath.touch()
+      indexFilePath.touch()
 
-			def newShardedWriter(f: ShardedWriter => Unit) = {
-				val store = new TestShardedStore {
-					val shardsTotal = 2
-					val writers = 1
-					val writerIndex = 0
-				}
-				try f(store)
-				finally store.close()
-			}
+      blobFilePath.exists should be === true
+      indexFilePath.exists should be === true
 
-			newShardedWriter { writer => 
-				writer.ownedShards.zipWithIndex foreach { case (shardId, index) => 
-					val id = writer.put(shardId.toString)
-				}
-				writer.close()
-			}
+      chomp.purgeInconsistentShards()
 
-			// "Download" files to "local" root directory
-			testChomp.downloadDatabaseVersion(testDatabase, 1L)	
+      blobFilePath.exists should be === false
+      indexFilePath.exists should be === false
+      (path / "0.blob").exists should be === true
+    }
 
-			// Verify that files were "downloaded"
-			(testChomp.rootDir /+ "TestCatalog").exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString).exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion1.toString + ".version")).exists should be === true
-			(0 until testDatabase
-				.versionedStore
-				.versionPath(testVersion1)
-				.listFiles
-				.filter(_.extension == "shard")
-				.size) foreach { n => 
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.index").exists should be === true
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.blob").exists should be === true
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion1.toString / s"$n.shard").exists should be === true
-			}
+    "add a version to the map of local databases to versions being served" in {
+      chomp.servingVersions should be === Map.empty[Database, Option[Long]]
+      chomp.initializeServingVersions()
+      chomp.servingVersions should be === Map(database1 -> Some(1L))
+    }
 
-			testChomp.availableShards should be === Set(
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1)						
-			)
-		}
+    /* other methods */
+    "download a given database version" in {
+      val database1Local = chomp.localDB(database1)
 
-		"download the latest database version" in {
-			// Write files to "remote" root directory
-			trait TestShardedStore extends ShardedWriter {
-				override val baseDir = testVersion2Path
-			}
+      database1Local.versionedStore.versionExists(2L) should be === false
 
-			def newShardedWriter(f: ShardedWriter => Unit) = {
-				val store = new TestShardedStore {
-					val shardsTotal = 2
-					val writers = 1
-					val writerIndex = 0
-				}
-				try f(store)
-				finally store.close()
-			}
+      database1.versionedStore.createVersion(2L)
+      createEmptyShard(database1.versionedStore, 2L)
+      createEmptyShard(database1.versionedStore, 2L)
+      database1.versionedStore.succeedVersion(2L, 2)
 
-			newShardedWriter { writer => 
-				writer.ownedShards.zipWithIndex foreach { case (shardId, index) => 
-					val id = writer.put(shardId.toString)
-				}
-				writer.close()
-			}
+      chomp.downloadDatabaseVersion(database1, 2L)
 
-			// Download files for latest version of testDatabase
-			testChomp.updateDatabase(testDatabase)
+      database1Local.versionedStore.versionExists(2L) should be === true
+      (database1Local.versionedStore.versionPath(2L) / "0.blob").exists should be === true
+      (database1Local.versionedStore.versionPath(2L) / "0.index").exists should be === true
+      database1Local.versionedStore.shardMarker(2L, 0).exists should be === true
+      (database1Local.versionedStore.versionPath(2L) / "1.blob").exists should be === true
+      (database1Local.versionedStore.versionPath(2L) / "1.index").exists should be === true
+      database1Local.versionedStore.shardMarker(2L, 1).exists should be === true
 
-			// Verify that latest version (testVersion2) was downloaded
-			(testChomp.rootDir /+ "TestCatalog").exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase").exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString).exists should be === true
-			(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" / (testVersion2.toString + ".version")).exists should be === true
-			(0 until testDatabase
-				.versionedStore
-				.versionPath(testVersion1)
-				.listFiles
-				.filter(_.extension == "shard")
-				.size) foreach { n => 
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.index").exists should be === true
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.blob").exists should be === true
-				(testChomp.rootDir /+ "TestCatalog" /+ "TestDatabase" /+ testVersion2.toString / s"$n.shard").exists should be === true
-			}
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 0)) should be === true
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 1)) should be === true
+    }
 
-			testChomp.availableShards should be === Set(
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),	
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
-				DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)							
-			)
-		}
+    "begin serving a given database version" in {
+      chomp.servingVersions should be === Map(database1 -> Some(1L))
+      chomp.serveVersion(database1, Some(2L))
+      chomp.servingVersions.getOrElse(database1, None) should be === Some(2L)
+    }    
 
-		"update a database version being served" in {
-			testChomp.serveVersion(testDatabase, Some(1L))
+    "determine the latest database version to download, if any" in {
+      database1.versionedStore.createVersion(3L)
+      createEmptyShard(database1.versionedStore, 3L)
+      createEmptyShard(database1.versionedStore, 3L)
+      createEmptyShard(database1.versionedStore, 3L)
+      database1.versionedStore.succeedVersion(3L, 3)
 
-			testChomp.servingVersions(testDatabase) should be === Some(1L)
+      chomp.getNewVersionNumber(database1) should be === Some(3L)
+    }
 
-			testChomp.initializeServingVersions()
+    "update a database to the latest version" in {
+      chomp.servingVersions.getOrElse(database1, None) should be === Some(2L)
+      chomp.localDB(database1).versionedStore.versionExists(3L) should be === false
 
-			testChomp.servingVersions(testDatabase) should be === Some(2L)
-		}
+      chomp.updateDatabase(database1)
 
-		"update the internal map of nodes alive" in {
-			testChomp.nodesAlive should be === Map.empty
+      chomp.localDB(database1).versionedStore.versionExists(3L) should be === true
 
-			testChomp.updateNodesAlive()
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 0)) should be === true
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 1)) should be === true
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 2)) should be === true
+    }
 
-			testChomp.nodesAlive should be === Map(
-				Node("Node1") -> true,
-				Node("Node2") -> false
-			)
-		}
+    "update the set of nodes alive" in {
+      chomp.nodesAlive should be === Map.empty[Node, Boolean]
+      chomp.updateNodesAlive()
+      chomp.nodesAlive should be === Map(Node("Node1") -> true, Node("Node2") -> false)
+    }
 
-		"update the internal map of nodes' content" in {
-			testChomp.nodesContent should be === Map.empty[Node, Set[DatabaseVersionShard]]
+    "update the map of remote nodes to DatabaseVersionShards available" in {
+      chomp.nodesContent should be === Map.empty[Node, Set[DatabaseVersionShard]]
+      chomp.updateNodesContent()
+      chomp.nodesContent should be === Map(
+        Node("Node1") -> Set(
+          DatabaseVersionShard(database1.catalog.name, database1.name, 1L, 0),
+          DatabaseVersionShard(database1.catalog.name, database1.name, 1L, 1)
+        ),
+        Node("Node2") -> Set(
+          DatabaseVersionShard(database1.catalog.name, database1.name, 1L, 0),
+          DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 0)
+        )
+      )
+    }
+  }
 
-			testChomp.updateNodesContent()
-
-			testChomp.nodesContent should be === Map(
-				Node("Node1") -> Set(
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)					
-				),
-				Node("Node2") -> Set(
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 0),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 1L, 1),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 0),
-					DatabaseVersionShard(testDatabase.catalog.name, testDatabase.name, 2L, 1)
-				)
-			)
-		}
-
-	}
 }

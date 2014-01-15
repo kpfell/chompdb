@@ -38,7 +38,7 @@ abstract class Chomp() {
 
 	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
 
-	@transient var servingVersions/*: Map[Database, Option[Long]]*/ = Map.empty[Database, Option[Long]]
+	@transient var servingVersions = Map.empty[Database, Option[Long]]
 	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
 
 	@transient var nodesAlive = Map.empty[Node, Boolean]
@@ -123,8 +123,8 @@ abstract class Chomp() {
 	
 	def initializeAvailableShards() {
 		availableShards = databases
-			.map { db => db.versionedStore.versions 
-				.map { v => db.shardsOfVersion(v) } 
+			.map { db => localDB(db).versionedStore.versions 
+				.map { v => localDB(db).shardsOfVersion(v) } 
 			}
 			.toSet
 			.flatten
@@ -138,10 +138,10 @@ abstract class Chomp() {
 		}
 
 		databases
-			.map { db => db.versionedStore.versions
-				.map { v => db.versionedStore.versionPath(v)
+			.map { db => localDB(db).versionedStore.versions
+				.map { v => localDB(db).versionedStore.versionPath(v)
 					.listFiles
-					.filter { f => isInconsistentShard(db, v, f) }
+					.filter { f => isInconsistentShard(localDB(db), v, f) }
 					.foreach { f => f.delete() }
 				}
 			}
