@@ -32,6 +32,7 @@ abstract class Chomp() {
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
 	val shardIndex: Int
 	val totalShards: Int
+	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
@@ -52,10 +53,7 @@ abstract class Chomp() {
 		initializeServingVersions()
 	}
 
-	// TODO: numThreads should not be hard set
 	def downloadDatabaseVersion(database: Database, version: Long) = {
-		val numThreads = 5
-
 		val remoteDir = database.versionedStore.versionPath(version)
 
 		// TODO: This "fails" silently if the version does not exist.
@@ -63,22 +61,31 @@ abstract class Chomp() {
 			val localDB = Chomp.this.localDB(database)
 			val localDir = localDB.versionedStore.createVersion(version)
 
-			// TODO: This causes problems with NodeProtocol.serveVersion, for example, if
-			// the version fails to transfer completely
-			copyShards(remoteDir, localDir)
+			// TODO: This "fails" silently if the number of max retries is reached
+			copyShards(remoteDir, localDir, 0) foreach { numRetries =>
+				if (numRetries < maxDownloadRetries) copyShards(remoteDir, localDir, numRetries)
+			}
+
 			copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
 		}
 
-		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
+		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
 			val remoteBasenames = remoteVersionDir
 				.listFiles
 				.map { _.basename }
 				.filter { _ forall Character.isDigit }
 				.toSet
+				
+			val remoteBasenamesToDownload = remoteBasenames
+				.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
 
-			for (basename <- remoteBasenames) {
+			for (basename <- remoteBasenamesToDownload) {
+				copyShardFiles(basename, remoteVersionDir, localVersionDir)
+			}
+
+			def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
 				val blobFile = remoteVersionDir / (basename + ".blob")
-				copy(blobFile, localVersionDir / blobFile.filename)
+						copy(blobFile, localVersionDir / blobFile.filename)
 
 				val indexFile = remoteVersionDir / (basename + ".index")
 				copy(indexFile, localVersionDir / indexFile.filename)
@@ -91,6 +98,15 @@ abstract class Chomp() {
 						DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
 				}
 			}
+			
+			val localBasenames = localVersionDir
+				.listFiles
+				.filter { _.extension == "shard" }
+				.map { _.basename }
+				.toSet
+
+			if (remoteBasenames == localBasenames) None
+			else Some(numRetries + 1)
 		}
 
 		def copyVersionFile(versionRemotePath: FileSystem#File, versionLocalDir: FileSystem#Dir) {
