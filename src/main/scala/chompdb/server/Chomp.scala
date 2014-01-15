@@ -62,11 +62,25 @@ abstract class Chomp() {
 			val localDir = localDB.versionedStore.createVersion(version)
 
 			// TODO: This "fails" silently if the number of max retries is reached
+			deleteIncompleteShards(localDir)
 			copyShards(remoteDir, localDir, 0) foreach { numRetries =>
-				if (numRetries < maxDownloadRetries) copyShards(remoteDir, localDir, numRetries)
+				if (numRetries < maxDownloadRetries) {
+					deleteIncompleteShards(localDir)
+					copyShards(remoteDir, localDir, numRetries)
+				}
+				else deleteIncompleteShards(localDir)
 			}
 
 			copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
+		}
+
+		def deleteIncompleteShards(localVersionDir: FileSystem#Dir) {
+			localVersionDir
+				.listFiles
+				.filter { _.basename forall Character.isDigit }
+				.foreach { f => 
+					if (!(localVersionDir / (f.basename + ".shard")).exists) f.delete()
+				}
 		}
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
