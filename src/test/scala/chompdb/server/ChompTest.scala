@@ -65,7 +65,6 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val replicationFactor = 1
     override val replicationBeforeVersionUpgrade = 1
     override val shardIndex = 0
-    // override val totalShards = 1
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
     override val fs = tmpLocalRoot.fs

@@ -31,7 +31,6 @@ abstract class Chomp() {
 	val replicationFactor: Int
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
 	val shardIndex: Int
-	// val totalShards: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem
@@ -93,12 +92,6 @@ abstract class Chomp() {
 				.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == 0) }
 				.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
 				.toSet
-
-			// val remoteBasenamesToDownload = remoteBasenames
-			// 	.map { _.basename }
-			// 	.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == 0) }
-			// 	.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
-			// 	.toSet
 
 			for (basename <- remoteBasenamesToDownload) {
 				copyShardFiles(basename, remoteVersionDir, localVersionDir)
