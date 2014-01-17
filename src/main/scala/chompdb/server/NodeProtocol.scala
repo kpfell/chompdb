@@ -12,4 +12,5 @@ trait NodeProtocol {
   type VersionShard = (Long, Int)
   def availableShards(catalog: String, database: String): Set[VersionShard]
   def serveVersion(catalog: String, database: String, version: Long): Unit
+  // def deserializeMapReduce[T, U](mapReduce: String): MapReduce[T, U]
 }

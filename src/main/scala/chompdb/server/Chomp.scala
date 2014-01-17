@@ -46,6 +46,8 @@ abstract class Chomp() {
 
 	def nodeProtocol: Map[Node, NodeProtocol]
 
+	def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]): String
+
 	def main(args: Array[String]) {
 		initializeAvailableShards()
 		purgeInconsistentShards()

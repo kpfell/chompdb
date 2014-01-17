@@ -62,6 +62,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val rootDir = tmpLocalRoot.root
 
         override def nodeProtocol = nodeProtocols
+
+        override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
     }
   }
 

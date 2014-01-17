@@ -69,6 +69,8 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val executor = mock(classOf[ScheduledExecutorService])
     override val fs = tmpLocalRoot.fs
     override val rootDir = tmpLocalRoot.root
+
+    override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
   }
 
   "Chomp" should {
