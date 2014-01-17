@@ -65,7 +65,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val replicationFactor = 1
     override val replicationBeforeVersionUpgrade = 1
     override val shardIndex = 0
-    override val totalShards = 1
+    // override val totalShards = 1
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
     override val fs = tmpLocalRoot.fs
@@ -133,7 +133,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
     }
 
     /* other methods */
-    "download a given database version" in {
+    "download appropriate shards for given database version" in {
       val database1Local = chomp.localDB(database1)
 
       database1Local.versionedStore.versionExists(2L) should be === false
@@ -149,12 +149,12 @@ class ChompTest extends WordSpec with ShouldMatchers {
       (database1Local.versionedStore.versionPath(2L) / "0.blob").exists should be === true
       (database1Local.versionedStore.versionPath(2L) / "0.index").exists should be === true
       database1Local.versionedStore.shardMarker(2L, 0).exists should be === true
-      (database1Local.versionedStore.versionPath(2L) / "1.blob").exists should be === true
-      (database1Local.versionedStore.versionPath(2L) / "1.index").exists should be === true
-      database1Local.versionedStore.shardMarker(2L, 1).exists should be === true
+      (database1Local.versionedStore.versionPath(2L) / "1.blob").exists should be === false
+      (database1Local.versionedStore.versionPath(2L) / "1.index").exists should be === false
+      database1Local.versionedStore.shardMarker(2L, 1).exists should be === false
 
       chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 0)) should be === true
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 1)) should be === true
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 1)) should be === false
     }
 
     "begin serving a given database version" in {
@@ -182,7 +182,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
       chomp.localDB(database1).versionedStore.versionExists(3L) should be === true
 
       chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 0)) should be === true
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 1)) should be === true
+      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 1)) should be === false
       chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 2)) should be === true
     }
 

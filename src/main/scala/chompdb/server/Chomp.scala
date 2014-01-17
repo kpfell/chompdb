@@ -31,7 +31,7 @@ abstract class Chomp() {
 	val replicationFactor: Int
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
 	val shardIndex: Int
-	val totalShards: Int
+	// val totalShards: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem
@@ -59,6 +59,7 @@ abstract class Chomp() {
 		// TODO: This "fails" silently if the version does not exist.
 		if (database.versionedStore.versionMarker(version).exists) {
 			val localDB = Chomp.this.localDB(database)
+			// TODO: What does createVersion do if there already exists a version there?
 			val localDir = localDB.versionedStore.createVersion(version)
 
 			// TODO: This "fails" silently if the number of max retries is reached
@@ -84,14 +85,20 @@ abstract class Chomp() {
 		}
 
 		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
-			val remoteBasenames = remoteVersionDir
+			val nodeCount = nodes.size
+
+			val remoteBasenamesToDownload = remoteVersionDir
 				.listFiles
 				.map { _.basename }
-				.filter { _ forall Character.isDigit }
-				.toSet
-				
-			val remoteBasenamesToDownload = remoteBasenames
+				.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == 0) }
 				.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
+				.toSet
+
+			// val remoteBasenamesToDownload = remoteBasenames
+			// 	.map { _.basename }
+			// 	.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == 0) }
+			// 	.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
+			// 	.toSet
 
 			for (basename <- remoteBasenamesToDownload) {
 				copyShardFiles(basename, remoteVersionDir, localVersionDir)
@@ -119,7 +126,7 @@ abstract class Chomp() {
 				.map { _.basename }
 				.toSet
 
-			if (remoteBasenames == localBasenames) None
+			if (remoteBasenamesToDownload == localBasenames) None
 			else Some(numRetries + 1)
 		}
 
