@@ -4,7 +4,9 @@ import chompdb._
 import chompdb.store.VersionedStore
 import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
+import java.io._
 import java.util.concurrent.ScheduledExecutorService
+import java.util.Properties
 import scala.collection._
 
 object Chomp {
@@ -30,7 +32,6 @@ abstract class Chomp() {
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
-	val shardIndex: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val fs: FileSystem
@@ -56,19 +57,45 @@ abstract class Chomp() {
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
 		val remoteDir = database.versionedStore.versionPath(version)
+		val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
 		// TODO: This "fails" silently if the version does not exist.
-		if (database.versionedStore.versionMarker(version).exists) {
+		if (remoteVersionMarker.exists) {
+			val rvmInput = new FileInputStream(remoteVersionMarker.fullpath)
+			val props = new Properties()
+			props.load(rvmInput)
+			rvmInput.close()
+
+			val shardIndex = 
+				if (props contains "highestShardIndex") props.getProperty("highestShardIndex").toInt + 1
+				else 0
+
+			if (props contains "highestShardIndex") {				
+				props.setProperty("highestShardIndex", shardIndex.toString)
+				val rvmOutput = new FileOutputStream(remoteVersionMarker.fullpath)
+				props.store(rvmOutput, null)
+				rvmOutput.close()
+
+				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
+			} else {
+				props.put("highestShardIndex", shardIndex.toString)
+				val rvmOutput = new FileOutputStream(remoteVersionMarker.fullpath)
+				props.store(rvmOutput, null)
+				rvmOutput.close()
+
+				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
+			}
+
 			val localDB = Chomp.this.localDB(database)
 			// TODO: What does createVersion do if there already exists a version there?
 			val localDir = localDB.versionedStore.createVersion(version)
 
 			// TODO: This "fails" silently if the number of max retries is reached
 			deleteIncompleteShards(localDir)
-			copyShards(remoteDir, localDir, 0) foreach { numRetries =>
+			copyShards(remoteDir, localDir, 0, shardIndex) foreach { numRetries =>
 				if (numRetries < maxDownloadRetries) {
 					deleteIncompleteShards(localDir)
-					copyShards(remoteDir, localDir, numRetries)
+					copyShards(remoteDir, localDir, numRetries, shardIndex)
 				}
 				else deleteIncompleteShards(localDir)
 			}
@@ -85,13 +112,13 @@ abstract class Chomp() {
 				}
 		}
 
-		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
+		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int, shardIndex: Int): Option[Int] = {
 			val nodeCount = nodes.size
 
 			val remoteBasenamesToDownload = remoteVersionDir
 				.listFiles
 				.map { _.basename }
-				.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == 0) }
+				.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == shardIndex) }
 				.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
 				.toSet
 

@@ -8,6 +8,7 @@ import java.io._
 import java.util.Properties
 
 object VersionedStore {
+  val shardIndexSuffix = ".shardIndex"
   val shardSuffix = ".shard"
   val versionSuffix = ".version"
 }
@@ -48,6 +49,18 @@ trait VersionedStore {
     shardMarker(version, shard).touch()
   }
 
+  def succeedShardIndex(version: Long, shardIndex: Int) {
+    shardIndexMarker(version).touch()
+    val marker = shardIndexMarker(version)
+
+    val props = new Properties()
+    props.put("shardIndex", shardIndex.toString)
+
+    val fileOutputStream = new FileOutputStream(marker.fullpath)
+    props.store(fileOutputStream, null)
+    fileOutputStream.close()
+  }
+
   def succeedVersion(version: Long, shardsTotal: Int) {
     versionMarker(version).touch()
     val files = versionPath(version).listFiles
@@ -58,7 +71,8 @@ trait VersionedStore {
     props.put("fileManifest", files.toString)
 
     val fileOutputStream = new FileOutputStream(marker.fullpath)
-    props.store(fileOutputStream, "")
+    props.store(fileOutputStream, null)
+    fileOutputStream.close()
   }
 
   def cleanup(versionsToKeep: Int) {
@@ -91,6 +105,8 @@ trait VersionedStore {
   }
 
   def versionExists(version: Long): Boolean = versions.contains(version)
+
+  def shardIndexMarker(version: Long) = root / (version.toString + shardIndexSuffix)
 
   def shardMarker(version: Long, shard: Int) = root /+ version.toString / (shard.toString + shardSuffix)
 
