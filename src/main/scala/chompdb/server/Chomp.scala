@@ -2,8 +2,6 @@ package chompdb.server
 
 import chompdb._
 import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
-// import chompdb.store.VersionedStore
-// import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.io._
 import java.nio.ByteBuffer
