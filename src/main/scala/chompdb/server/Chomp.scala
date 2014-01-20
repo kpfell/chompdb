@@ -1,8 +1,9 @@
 package chompdb.server
 
 import chompdb._
-import chompdb.store.VersionedStore
-import chompdb.store.ShardedWriter
+import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
+// import chompdb.store.VersionedStore
+// import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.io._
 import java.util.concurrent.ScheduledExecutorService
@@ -28,6 +29,7 @@ object Chomp {
 
 abstract class Chomp() {
 	val databases: Seq[Database]
+	val localNode: Node
 	val nodes: Map[Node, Endpoint] 
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
@@ -40,6 +42,7 @@ abstract class Chomp() {
 	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
 
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
+	@transient var shardsPerVersion = Map.empty[(Database, Long), Int]
 	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
 
 	@transient var nodesAlive = Map.empty[Node, Boolean]

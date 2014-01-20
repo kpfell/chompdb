@@ -51,6 +51,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
   val chomp = new Chomp {
     override val databases = Seq(database1)
+    override val localNode = Node("Node1")
     override val nodes = Map(
       Node("Node1") -> Endpoint("Endpoint1"),
       Node("Node2") -> Endpoint("Endpoint2")

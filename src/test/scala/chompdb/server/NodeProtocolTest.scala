@@ -51,6 +51,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
     .map { node =>
       node -> new Chomp {
         override val databases = Seq(db1)
+        override val localNode = node
         override val nodes = allNodes map { n => (n, Endpoint("Endpoint" + n.id takeRight 1)) } toMap
         override val nodeAlive = mock(classOf[NodeAlive])
         override val replicationFactor = 1
