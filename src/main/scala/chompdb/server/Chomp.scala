@@ -6,9 +6,15 @@ import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
 // import chompdb.store.ShardedWriter
 import f1lesystem.FileSystem
 import java.io._
+import java.nio.ByteBuffer
 import java.util.concurrent.ScheduledExecutorService
 import java.util.Properties
 import scala.collection._
+
+case class DatabaseNotFoundException(smth: String) extends Exception
+case class DatabaseNotServedException(smth: String) extends Exception
+case class ShardsNotFoundException(smth: String) extends Exception
+case class VersionNotFoundException(smth: String) extends Exception
 
 object Chomp {
 	class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
@@ -23,6 +29,10 @@ object Chomp {
 				.databases
 				.find(_.name == database)
 				.foreach { db => chomp.serveVersion(db, Some(version)) }
+		}
+
+		override def get(catalog: String, database: String, key: Long): ByteBuffer = {
+			chomp.getBlob(catalog, database, key)
 		}
 	}
 }
@@ -42,7 +52,7 @@ abstract class Chomp() {
 	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
 
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
-	@transient var shardsPerVersion = Map.empty[(Database, Long), Int]
+	@transient var numShardsPerVersion = Map.empty[(Database, Long), Int]
 	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
 
 	@transient var nodesAlive = Map.empty[Node, Boolean]
@@ -165,6 +175,49 @@ abstract class Chomp() {
 			}
 		}
 	}
+
+	def getBlob(catalog: String, database: String, key: Long): ByteBuffer = {
+		val blobDatabase = databases 
+			.find { db => db.catalog.name == catalog && db.name == database }
+			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
+
+		val servedVersion = servingVersions getOrElse (
+			blobDatabase, 
+			throw new DatabaseNotServedException("Database $blobDatabase.name$ not currently being served.")
+		)
+		
+		val version = servedVersion getOrElse (
+			throw new VersionNotFoundException("Version $servedVersion$ not found.")
+		)
+
+		val numShards = numShardsPerVersion getOrElse ( 
+			(blobDatabase, version),
+			throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
+		)
+
+		val shard = DatabaseVersionShard(catalog, database, version, (key % numShards).toInt)
+
+		val nodesServingShard = nodesContent
+			.filter { _._2 contains shard }
+			.keys
+			.toSet
+
+		if (nodesServingShard contains localNode) {
+			val reader = new FileStore.Reader {
+				val baseFile = localDB(blobDatabase)
+					.versionedStore
+					.shardMarker(shard.version, shard.shard)
+			}
+
+			val blob = reader.get(key)
+			reader.close()
+
+			ByteBuffer.wrap(blob)
+		} else {
+			val node = nodesServingShard.toList.head
+			nodeProtocol(node).get(catalog, database, key)
+		}
+	}		
 
 	def getNewVersionNumber(database: Database): Option[Long] = database
 		.versionedStore
