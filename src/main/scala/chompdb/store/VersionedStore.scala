@@ -45,6 +45,18 @@ trait VersionedStore {
     versionMarker(version).delete()
   }
 
+  def numShardsForVersion(version: Long): Int = {
+    val marker = versionMarker(version)
+
+    val vmInput = new FileInputStream(marker.fullpath)
+    val props = new Properties()
+    props.load(vmInput)
+    vmInput.close()
+
+    if (props contains "shardsTotal") props.getProperty("shardsTotal").toInt
+    else 0
+  }
+
   def succeedShard(version: Long, shard: Int) {
     shardMarker(version, shard).touch()
   }

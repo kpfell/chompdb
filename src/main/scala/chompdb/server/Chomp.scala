@@ -64,6 +64,7 @@ abstract class Chomp() {
 		initializeAvailableShards()
 		purgeInconsistentShards()
 		initializeServingVersions()
+		initializeNumShardsPerVersion()
 	}
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
@@ -260,11 +261,18 @@ abstract class Chomp() {
 			}
 	}
 
+	def initializeNumShardsPerVersion() {
+		numShardsPerVersion = databases
+			.map { db => (db, localDB(db).versionedStore.versions) }
+			.map { dbvs => dbvs._2 map { v => (dbvs._1, v) } }
+			.flatten
+			.map { dbv => (dbv._1, dbv._2) -> localDB(dbv._1).versionedStore.numShardsForVersion(dbv._2) }
+			.toMap
+	}
+
 	def initializeServingVersions() {
 		servingVersions = databases
-			.map { db => 
-				(db, localDB(db).versionedStore.mostRecentVersion) 
-			}
+			.map { db => (db, localDB(db).versionedStore.mostRecentVersion) }
 			.toMap
 	}
 
