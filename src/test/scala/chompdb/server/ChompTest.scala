@@ -187,6 +187,16 @@ class ChompTest extends WordSpec with ShouldMatchers {
       chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 2)) should be === true
     }
 
+    "initialize numShardsPerVersion" in {
+      chomp.numShardsPerVersion should be === Map.empty[(Database, Long), Int]
+      chomp.initializeNumShardsPerVersion()
+      chomp.numShardsPerVersion should be === Map(
+        (database1, 1L) -> 2,
+        (database1, 2L) -> 2,
+        (database1, 3L) -> 3
+      )
+    }
+
     "update the set of nodes alive" in {
       chomp.nodesAlive should be === Map.empty[Node, Boolean]
       chomp.updateNodesAlive()

@@ -53,8 +53,7 @@ trait VersionedStore {
     props.load(vmInput)
     vmInput.close()
 
-    if (props contains "shardsTotal") props.getProperty("shardsTotal").toInt
-    else 0
+    props.getProperty("shardsTotal", "0").toInt
   }
 
   def succeedShard(version: Long, shard: Int) {
