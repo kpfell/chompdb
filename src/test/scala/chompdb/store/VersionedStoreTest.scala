@@ -78,7 +78,7 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
       createEmptyShard(vs, 4L)
       createEmptyShard(vs, 4L)
 
-      vs.shardNumsOfVersion(4L) should be === Set(0, 1, 2)
+      vs.shardNumsForVersion(4L) should be === Set(0, 1, 2)
     }
 
     "cleanup older versions" in {

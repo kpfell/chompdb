@@ -26,7 +26,7 @@ trait VersionedStore {
 
   def mostRecentVersion: Option[Long] = versions.headOption
 
-  def shardNumsOfVersion(version: Long): Set[Int] = versionPath(version)
+  def shardNumsForVersion(version: Long): Set[Int] = versionPath(version)
     .listFiles
     .filter(_.extension == "shard")
     .map { _.basename.toInt }

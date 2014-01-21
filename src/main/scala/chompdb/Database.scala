@@ -19,7 +19,7 @@ class Database(
   }
 
   def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionedStore
-    .shardNumsOfVersion(version)
+    .shardNumsForVersion(version)
     .map { shardNum => DatabaseVersionShard(catalog.name, name, version, shardNum) }
 
 }
