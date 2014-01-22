@@ -63,15 +63,20 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
       val c = Catalog("catalog1", tmpRoot.fs, remoteDir)
       val d = c.database("database1")
       val version = System.currentTimeMillis // timestamp
-      val versionPath = d.createVersion(version)
+      val versionPath = d.versionedStore.createVersion(version)
       copyShards(writers, versionPath)
-      d.succeedVersion(version)
+      d.versionedStore.succeedVersion(version, writers(0).shardsTotal)
       
       def copyShards(writers: Seq[ShardedWriter], versionDir: FileSystem#Dir) {
         for (w <- writers) {
           for (baseFile <- w.shardFiles) {
             copy(baseFile.indexFile, versionDir / baseFile.indexFile.filename)
+
             copy(baseFile.blobFile,  versionDir / baseFile.blobFile.filename)
+
+            if ((versionDir / baseFile.indexFile.filename).exists && 
+                (versionDir / baseFile.blobFile.filename).exists)
+              d.versionedStore.succeedShard(version, baseFile.baseFile.basename.toInt)
           }
         }
       }
@@ -88,6 +93,7 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
       (0 until 20) foreach { n =>
         (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.index").exists should be === true
         (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.blob").exists should be === true
+        (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.shard").exists should be === true
       }
     }
   }

@@ -1,8 +1,15 @@
 package chompdb.store
 
+import chompdb.Database
+import chompdb.DatabaseVersionShard
+
 import f1lesystem.FileSystem
+import java.io._
+import java.util.Properties
 
 object VersionedStore {
+  val shardIndexSuffix = ".shardIndex"
+  val shardSuffix = ".shard"
   val versionSuffix = ".version"
 }
 
@@ -19,6 +26,12 @@ trait VersionedStore {
 
   def mostRecentVersion: Option[Long] = versions.headOption
 
+  def shardNumsForVersion(version: Long): Set[Int] = versionPath(version)
+    .listFiles
+    .filter(_.extension == "shard")
+    .map { _.basename.toInt }
+    .toSet 
+
   def createVersion(version: Long = System.currentTimeMillis): fs.Dir = {
     if (versions contains version) throw new RuntimeException("Version already exists")
     val path = versionPath(version)
@@ -32,8 +45,45 @@ trait VersionedStore {
     versionMarker(version).delete()
   }
 
-  def succeedVersion(version: Long) {
+  def numShardsForVersion(version: Long): Int = {
+    val marker = versionMarker(version)
+
+    val vmInput = new FileInputStream(marker.fullpath)
+    val props = new Properties()
+    props.load(vmInput)
+    vmInput.close()
+
+    props.getProperty("shardsTotal", "0").toInt
+  }
+
+  def succeedShard(version: Long, shard: Int) {
+    shardMarker(version, shard).touch()
+  }
+
+  def succeedShardIndex(version: Long, shardIndex: Int) {
+    shardIndexMarker(version).touch()
+    val marker = shardIndexMarker(version)
+
+    val props = new Properties()
+    props.put("shardIndex", shardIndex.toString)
+
+    val fileOutputStream = new FileOutputStream(marker.fullpath)
+    props.store(fileOutputStream, null)
+    fileOutputStream.close()
+  }
+
+  def succeedVersion(version: Long, shardsTotal: Int) {
     versionMarker(version).touch()
+    val files = versionPath(version).listFiles
+    val marker = versionMarker(version)
+
+    val props = new Properties()
+    props.put("shardsTotal", shardsTotal.toString)
+    props.put("fileManifest", files.toString)
+
+    val fileOutputStream = new FileOutputStream(marker.fullpath)
+    props.store(fileOutputStream, null)
+    fileOutputStream.close()
   }
 
   def cleanup(versionsToKeep: Int) {
@@ -51,7 +101,7 @@ trait VersionedStore {
     }
   }
 
-  /** Sorted from most recent to oldest */
+  /* Sorted from most recent to oldest */
   def versions = {
     if (!root.exists) {
       Seq.empty
@@ -64,6 +114,12 @@ trait VersionedStore {
       vs.flatten.sorted.reverse
     }
   }
+
+  def versionExists(version: Long): Boolean = versions.contains(version)
+
+  def shardIndexMarker(version: Long) = root / (version.toString + shardIndexSuffix)
+
+  def shardMarker(version: Long, shard: Int) = root /+ version.toString / (shard.toString + shardSuffix)
 
   def versionMarker(version: Long) = root / (version.toString + versionSuffix)
 

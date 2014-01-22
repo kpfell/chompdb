@@ -37,7 +37,6 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
     }
 
     "cycle through shard writers" in newShardedWriter { writer =>
-
       var expectedId = 0
       writer.ownedShards.zipWithIndex foreach { case (shardId, index) =>
         writer.currentWriterIndex should be === index % writer.ownedShards.size

@@ -9,16 +9,17 @@ class Database(
   val catalog: Catalog,
   val name: String
 ) {
-  private[chompdb] lazy val versionedStore = new VersionedStore {
+  val versionedStore = new VersionedStore {
     override val fs = catalog.fs
-    override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: remove cast
+    override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: Remove cast
   }
 
-  def createVersion(version: Long) = versionedStore.createVersion(version)
-
-  def succeedVersion(version: Long) = versionedStore.succeedVersion(version)
-  
   override def equals(other: Any) = other match {
     case d: Database => (d.catalog == catalog) && (d.name == name)
   }
+
+  def shardsOfVersion(version: Long): Set[DatabaseVersionShard] = versionedStore
+    .shardNumsForVersion(version)
+    .map { shardNum => DatabaseVersionShard(catalog.name, name, version, shardNum) }
+
 }

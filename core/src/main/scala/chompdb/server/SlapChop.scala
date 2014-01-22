@@ -7,7 +7,7 @@ trait Mapper[T, U] {
   /** Typically named `flatMap` but we're trying to be faithful
    *  to map-reduce naming conventions.
    */
-  def map(t: T): Seq[U]
+  def map(t: T): U // Seq[U]
 }
 
 @serializable
