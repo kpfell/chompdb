@@ -10,8 +10,8 @@ object FileStore {
   trait StoreFiles {
     val baseFile: FileSystem#File
 
-    lazy val blobFile  = baseFile.parent / s"${baseFile.filename}.blob"
-    lazy val indexFile = baseFile.parent / s"${baseFile.filename}.index"
+    lazy val blobFile  = baseFile.parent / s"${baseFile.basename}.blob"
+    lazy val indexFile = baseFile.parent / s"${baseFile.basename}.index"
   }
 
   trait Reader extends Store.Reader with StoreFiles {

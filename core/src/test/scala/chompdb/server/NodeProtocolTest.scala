@@ -41,11 +41,9 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val node2 = Node("Node2")
   val allNodes = Set(node1, node2)
 
-  lazy val nodeProtocols = {
-    chomps 
-      .map { case (node, chomp) => node -> new Chomp.LocalNodeProtocol(node, chomp) } 
-      .toMap
-  }
+  lazy val nodeProtocols = chomps 
+    .map { case (node, chomp) => node -> new Chomp.LocalNodeProtocol(node, chomp) } 
+    .toMap
 
   val chomps: Set[(Node, Chomp)] = allNodes
     .map { node =>
@@ -64,7 +62,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override def nodeProtocol = nodeProtocols
 
         override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
-    }
+      }
   }
 
   chomps foreach { nodeAndChomp => nodeAndChomp._2.initializeAvailableShards() }

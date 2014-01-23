@@ -2,9 +2,11 @@ package chompdb.server
 
 import chompdb._
 import chompdb.store._
-import chompdb.testing.TestUtils.createEmptyShard
+import chompdb.testing._
 import f1lesystem.LocalFileSystem
 import java.util.concurrent.ScheduledExecutorService
+import scala.collection._
+import scala.collection.mutable.SynchronizedSet
 
 import org.mockito.Mockito.{ mock, when }
 import org.scalatest.WordSpec
@@ -12,6 +14,10 @@ import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompTest extends WordSpec with ShouldMatchers {
+  import TestUtils.stringToByteArray
+  import TestUtils.byteArrayToString
+  import TestUtils.createEmptyShard
+
   val testName = "ChompTest"
 
   val tmpLocalRoot = new LocalFileSystem.TempRoot {
@@ -216,6 +222,90 @@ class ChompTest extends WordSpec with ShouldMatchers {
           DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 0)
         )
       )
+    }
+
+    "return a blob that is stored locally" in {
+      val tmpLocalRoot2 = new LocalFileSystem.TempRoot {
+        override val rootName = "local"
+        override lazy val root: fs.Dir = {
+          val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ "ChompGetterTest" /+ rootName
+          if (tmp.exists) {
+            tmp.deleteRecursively()
+          }
+          tmp.mkdir()
+          tmp
+        }
+      }
+
+      val catalog2 = Catalog("catalog2", tmpLocalRoot2.fs, tmpLocalRoot2.root)
+      val database3 = catalog2.database("database3")
+      database3.versionedStore.createVersion(0L)
+
+      val numThreads = 1
+
+      val writers = (0 until numThreads) map { i =>
+        new ShardedWriter {
+          val writers = numThreads
+          val writerIndex = i
+          val shardsTotal = 1
+          val baseDir = database3.versionedStore.versionPath(0L)
+        }
+      }
+      
+      val ids = new mutable.HashSet[Long] with SynchronizedSet[Long]
+      
+      val threads = (1 to numThreads) map { n =>
+        new Thread("IntegrationTest") {
+          override def run() {
+            (1 to 100) foreach { x =>
+              val id = writers(n-1).put(s"This is a test: thread $n element $x")
+              ids += id
+            }            
+          }
+        }
+      }
+      
+      threads foreach { _.start() }
+      threads foreach { _.join() }
+      
+      writers foreach { _.close() }
+
+      ids should be === Set((0 until 100): _*)
+
+      database3.versionedStore.succeedVersion(0L, 1)
+
+      val mockedProtocol3 = mock(classOf[NodeProtocol])
+      when(mockedProtocol3.availableShards(database3.catalog.name, database3.name))
+        .thenReturn(Set((0L, 0)))
+
+      val getterChomp: Chomp = new Chomp {
+        override val databases = Seq(database3)
+        override val localNode = Node("Node1")
+        override val nodes = Map(Node("Node1") -> Endpoint("Endpoint1"))
+        override val nodeAlive = mock(classOf[NodeAlive])
+        override val replicationFactor = 1
+        override val replicationBeforeVersionUpgrade = 1
+        override val maxDownloadRetries = 3
+        override val executor = mock(classOf[ScheduledExecutorService])
+        override val fs = tmpLocalRoot2.fs
+        override val rootDir = tmpLocalRoot2.root
+
+        override def nodeProtocol = Map(Node("Node1") -> mockedProtocol3)
+
+        override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
+      }
+
+      getterChomp
+        .nodeProtocol(Node("Node1"))
+        .availableShards(database3.catalog.name, database3.name) should be === Set((0L, 0))
+
+      getterChomp.initializeAvailableShards()
+      getterChomp.initializeServingVersions()
+      getterChomp.initializeNumShardsPerVersion()
+      getterChomp.updateNodesContent()
+
+      val value = getterChomp.getBlob(database3.catalog.name, database3.name, 0L) 
+      new String(value.array()) should be === "This is a test: thread 1 element 1"
     }
   }
 
