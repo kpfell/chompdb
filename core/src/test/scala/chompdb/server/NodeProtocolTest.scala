@@ -14,21 +14,8 @@ import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class NodeProtocolTest extends WordSpec with ShouldMatchers {
-  val testName = "NodeProtocolTest"
-
-  val tmpLocalRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
-
-  val cat1 = new Catalog("Catalog1", tmpLocalRoot.fs, tmpLocalRoot.root)
+  val tmpLocalRoot = LocalFileSystem.tempRoot(getClass.getSimpleName)
+  val cat1 = new Catalog("Catalog1", tmpLocalRoot.filesystem, tmpLocalRoot)
   val db1 = cat1.database("Database1")
   
   db1.versionedStore.createVersion(1L)
@@ -56,8 +43,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
-        override val fs = tmpLocalRoot.fs
-        override val rootDir = tmpLocalRoot.root
+        override val fs = tmpLocalRoot.filesystem
+        override val rootDir = tmpLocalRoot
 
         override def nodeProtocol = nodeProtocols
 

@@ -27,6 +27,6 @@ define "chompdb" do
 
   desc "Integration/Smoke testing"
   define "integration" do
-    compile.with project("core")
+    compile.with project("core"), project("core").compile.dependencies
   end
 end

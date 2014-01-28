@@ -19,8 +19,9 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
 
   "VersionedStore" should {
 
-    val vs = new VersionedStore with LocalFileSystem.TempRoot {
-      override val rootName = classOf[VersionedStoreTest].getSimpleName
+    val vs = new VersionedStore {
+      override val fs = LocalFileSystem
+      override val root = LocalFileSystem.tempRoot(classOf[VersionedStoreTest].getSimpleName)
     }
 
     "create versions" in {

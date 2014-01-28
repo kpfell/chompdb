@@ -47,7 +47,7 @@ abstract class Chomp() {
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 
-	@transient private[server] var availableShards = Set.empty[DatabaseVersionShard]
+	@transient var availableShards = Set.empty[DatabaseVersionShard]
 
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
 	@transient var numShardsPerVersion = Map.empty[(Database, Long), Int]
@@ -203,7 +203,7 @@ abstract class Chomp() {
 
 		if (nodesServingShard contains localNode) {
 			val reader = new FileStore.Reader {
-				val baseFile = localDB(blobDatabase)
+				val baseFile: FileSystem#File = localDB(blobDatabase)
 					.versionedStore
 					.shardMarker(shard.version, shard.shard)
 			}
