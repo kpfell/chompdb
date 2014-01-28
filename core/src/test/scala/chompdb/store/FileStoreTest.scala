@@ -3,21 +3,29 @@ package chompdb.store
 import chompdb._
 import chompdb.sharding._
 import chompdb.testing._
-import f1lesystem.LocalFileSystem
+import f1lesystem.{LocalFileSystem, FileSystem}
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
 import scala.collection._
+import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class FileStoreTest extends WordSpec with ShouldMatchers {
+class FileStoreTest extends WordSpec with ShouldMatchers with BeforeAndAfter {
   import TestUtils.stringToByteArray
   import TestUtils.byteArrayToString
 
+  val tmp = LocalFileSystem.tempRoot(getClass.getSimpleName)
+  val tmpFile = tmp / "filestore"
+  
+  before {
+    tmp.deleteRecursively()
+    tmp.mkdir()
+  }
+  
   "FileStore" should {
     "write and read back data" in {
-      val writer = new FileStore.Writer with LocalFileSystem.TempRoot {
-        override val rootName = "FileSystemWriterTest"
-        override val baseFile = root / "test"
+      val writer = new FileStore.Writer {
+        override val baseFile = tmpFile
         override val shards = new Sharded {
           override val shardsIndex = 2
           override val shardsTotal = 3
@@ -38,9 +46,8 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
     }
 
     "support large amounts of data" in {
-      val writer = new FileStore.Writer with LocalFileSystem.TempRoot {
-        override val rootName = "FileSystemWriterTest"
-        override val baseFile = root / "test"
+      val writer = new FileStore.Writer {
+        override val baseFile = tmpFile
         override val shards = new Sharded {
           override val shardsIndex = 2
           override val shardsTotal = 3
@@ -69,13 +76,9 @@ class FileStoreTest extends WordSpec with ShouldMatchers {
     }
 
     "not leak file descriptors when reading/writing" in {
-      val tmp = new LocalFileSystem.TempRoot {
-        override val rootName = "FileSystemWriterTest-Leak"
-      }
-
       for (i <- 1 to 99999) {
         val writer = new FileStore.Writer {
-          override val baseFile = tmp.root / s"test-$i"
+          override val baseFile = tmp / s"test-$i"
           override val shards = new Sharded {
             override val shardsIndex = 2
             override val shardsTotal = 3

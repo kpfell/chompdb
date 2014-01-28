@@ -20,14 +20,12 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
 
   val numThreads = 5
 
-  val tmpRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "IntegrationTest"
-  }
+  val tmpRoot = LocalFileSystem.tempRoot("IntegrationTest")
   
   "ChompDB" should {
     "create stores and upload them to S3" in {
       
-      val localDir = tmpRoot.root /+ "local"
+      val localDir = tmpRoot /+ "local"
       localDir.mkdir()
       
       val writers = (0 until numThreads) map { i =>
@@ -59,8 +57,8 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
 
       ids should be === Set((0 until 500): _*)
       
-      val remoteDir = tmpRoot.root /+ "remote"
-      val c = Catalog("catalog1", tmpRoot.fs, remoteDir)
+      val remoteDir = tmpRoot /+ "remote"
+      val c = Catalog("catalog1", tmpRoot.filesystem, remoteDir)
       val d = c.database("database1")
       val version = System.currentTimeMillis // timestamp
       val versionPath = d.versionedStore.createVersion(version)

@@ -13,9 +13,8 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
   import TestUtils.stringToByteArray
   import TestUtils.byteArrayToString
 
-  trait TestShardedStore extends ShardedWriter with LocalFileSystem.TempRoot {
-    override val rootName = "ShardedStoreTest"
-    override val baseDir = root
+  trait TestShardedStore extends ShardedWriter {
+    override val baseDir = LocalFileSystem.tempRoot("ShardedStoreTest")
   }
 
   def newShardedWriter(f: ShardedWriter => Unit) = {

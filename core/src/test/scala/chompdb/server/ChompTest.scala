@@ -7,10 +7,10 @@ import f1lesystem.LocalFileSystem
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection._
 import scala.collection.mutable.SynchronizedSet
-
 import org.mockito.Mockito.{ mock, when }
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
+import f1lesystem.FileSystem
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ChompTest extends WordSpec with ShouldMatchers {
@@ -18,33 +18,11 @@ class ChompTest extends WordSpec with ShouldMatchers {
   import TestUtils.byteArrayToString
   import TestUtils.createEmptyShard
 
-  val testName = "ChompTest"
-
-  val tmpLocalRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
-
-  val tmpRemoteRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "remote"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
-
-  val catalog1 = Catalog("Catalog1", tmpRemoteRoot.fs, tmpRemoteRoot.root)
+  val tmpRoot = LocalFileSystem.tempRoot(classOf[ChompTest].getClass.getSimpleName)
+  val tmpLocalRoot = tmpRoot /+ "local"
+  val tmpRemoteRoot = tmpRoot /+ "remote"
+  
+  val catalog1 = Catalog("Catalog1", tmpRemoteRoot.filesystem, tmpRemoteRoot)
   val database1 = catalog1.database("Database1")
 
   val mockedProtocol1 = mock(classOf[NodeProtocol])
@@ -73,8 +51,8 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val replicationBeforeVersionUpgrade = 1
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
-    override val fs = tmpLocalRoot.fs
-    override val rootDir = tmpLocalRoot.root
+    override val fs = tmpLocalRoot.filesystem
+    override val rootDir = tmpLocalRoot
 
     override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
   }
@@ -225,19 +203,8 @@ class ChompTest extends WordSpec with ShouldMatchers {
     }
 
     "return a blob that is stored locally" in {
-      val tmpLocalRoot2 = new LocalFileSystem.TempRoot {
-        override val rootName = "local"
-        override lazy val root: fs.Dir = {
-          val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ "ChompGetterTest" /+ rootName
-          if (tmp.exists) {
-            tmp.deleteRecursively()
-          }
-          tmp.mkdir()
-          tmp
-        }
-      }
-
-      val catalog2 = Catalog("catalog2", tmpLocalRoot2.fs, tmpLocalRoot2.root)
+      val tmpLocalRoot2 = tmpRoot /+ "ChompGetterTest"
+      val catalog2 = Catalog("catalog2", tmpLocalRoot2.filesystem, tmpLocalRoot2)
       val database3 = catalog2.database("database3")
       database3.versionedStore.createVersion(0L)
 
@@ -248,7 +215,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
           val writers = numThreads
           val writerIndex = i
           val shardsTotal = 1
-          val baseDir = database3.versionedStore.versionPath(0L)
+          val baseDir: FileSystem#Dir = database3.versionedStore.versionPath(0L)
         }
       }
       
@@ -287,8 +254,8 @@ class ChompTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
-        override val fs = tmpLocalRoot2.fs
-        override val rootDir = tmpLocalRoot2.root
+        override val fs = tmpLocalRoot2.filesystem
+        override val rootDir = tmpLocalRoot2
 
         override def nodeProtocol = Map(Node("Node1") -> mockedProtocol3)
 
