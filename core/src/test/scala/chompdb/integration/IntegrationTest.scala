@@ -20,20 +20,41 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
 
   val numThreads = 5
 
-  val tmpRoot = LocalFileSystem.tempRoot("IntegrationTest")
+  val testName = "IntegrationTest"
+
+  val tmpLocalRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "local"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }  
+
+  val tmpRemoteRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "remote"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  } 
   
   "ChompDB" should {
     "create stores and upload them to S3" in {
-      
-      val localDir = tmpRoot /+ "local"
-      localDir.mkdir()
       
       val writers = (0 until numThreads) map { i =>
         new ShardedWriter {
           val writers = numThreads
           val writerIndex = i
           val shardsTotal = 20
-          val baseDir = localDir
+          val baseDir = tmpLocalRoot.root
         }
       }
       
@@ -57,8 +78,7 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
 
       ids should be === Set((0 until 500): _*)
       
-      val remoteDir = tmpRoot /+ "remote"
-      val c = Catalog("catalog1", tmpRoot.filesystem, remoteDir)
+      val c = Catalog("catalog1", tmpRemoteRoot.fs, tmpRemoteRoot.root)
       val d = c.database("database1")
       val version = System.currentTimeMillis // timestamp
       val versionPath = d.versionedStore.createVersion(version)
@@ -85,13 +105,13 @@ class IntegrationTest extends WordSpec with ShouldMatchers {
         }
       }
       
-      (remoteDir /+ "catalog1").exists should be === true
-      (remoteDir /+ "catalog1" /+ "database1").exists should be === true
-      (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString)).exists should be === true
+      (tmpRemoteRoot.root /+ "catalog1").exists should be === true
+      (tmpRemoteRoot.root /+ "catalog1" /+ "database1").exists should be === true
+      (tmpRemoteRoot.root /+ "catalog1" /+ "database1" /+ (version.toString)).exists should be === true
       (0 until 20) foreach { n =>
-        (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.index").exists should be === true
-        (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.blob").exists should be === true
-        (remoteDir /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.shard").exists should be === true
+        (tmpRemoteRoot.root /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.index").exists should be === true
+        (tmpRemoteRoot.root /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.blob").exists should be === true
+        (tmpRemoteRoot.root /+ "catalog1" /+ "database1" /+ (version.toString) / s"$n.shard").exists should be === true
       }
     }
   }

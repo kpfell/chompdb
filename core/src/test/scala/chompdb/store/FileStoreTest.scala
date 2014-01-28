@@ -14,12 +14,24 @@ class FileStoreTest extends WordSpec with ShouldMatchers with BeforeAndAfter {
   import TestUtils.stringToByteArray
   import TestUtils.byteArrayToString
 
-  val tmp = LocalFileSystem.tempRoot(getClass.getSimpleName)
-  val tmpFile = tmp / "filestore"
+  val testName = "IntegrationTest"
+
+  val tmpRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "local"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }
+  val tmpFile = tmpRoot.root / "filestore"
   
   before {
-    tmp.deleteRecursively()
-    tmp.mkdir()
+    tmpRoot.root.deleteRecursively()
+    tmpRoot.root.mkdir()
   }
   
   "FileStore" should {
@@ -78,7 +90,7 @@ class FileStoreTest extends WordSpec with ShouldMatchers with BeforeAndAfter {
     "not leak file descriptors when reading/writing" in {
       for (i <- 1 to 99999) {
         val writer = new FileStore.Writer {
-          override val baseFile = tmp / s"test-$i"
+          override val baseFile = tmpRoot.root / s"test-$i"
           override val shards = new Sharded {
             override val shardsIndex = 2
             override val shardsTotal = 3

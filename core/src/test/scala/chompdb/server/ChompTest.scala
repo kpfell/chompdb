@@ -3,7 +3,7 @@ package chompdb.server
 import chompdb._
 import chompdb.store._
 import chompdb.testing._
-import f1lesystem.LocalFileSystem
+import f1lesystem.{ FileSystem, LocalFileSystem }
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection._
 import scala.collection.mutable.SynchronizedSet
@@ -248,7 +248,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
           val writers = numThreads
           val writerIndex = i
           val shardsTotal = 1
-          val baseDir = database3.versionedStore.versionPath(0L)
+          val baseDir: FileSystem#Dir = database3.versionedStore.versionPath(0L)
         }
       }
       
@@ -320,7 +320,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
           val writers = numThreads
           val writerIndex = i
           val shardsTotal = 1
-          val baseDir = database4.versionedStore.versionPath(0L)
+          val baseDir: FileSystem#Dir = database4.versionedStore.versionPath(0L)
         }
       }
       
