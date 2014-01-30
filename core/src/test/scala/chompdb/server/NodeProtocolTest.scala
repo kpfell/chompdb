@@ -6,7 +6,7 @@ import chompdb.testing.TestUtils.createEmptyShard
 
 import f1lesystem.LocalFileSystem
 
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
 
 import org.mockito.Mockito.{ mock, verify, when }
 import org.scalatest.WordSpec
@@ -56,6 +56,9 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
+        override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
+        override val nodesContentFreq = (1L, TimeUnit.MINUTES) 
         override val fs = tmpLocalRoot.fs
         override val rootDir = tmpLocalRoot.root
 

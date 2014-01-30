@@ -4,7 +4,7 @@ import chompdb._
 import chompdb.store._
 import chompdb.testing._
 import f1lesystem.{ FileSystem, LocalFileSystem }
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
 import scala.collection._
 import scala.collection.mutable.SynchronizedSet
 
@@ -85,6 +85,9 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val replicationBeforeVersionUpgrade = 1
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
+    override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
+    override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
+    override val nodesContentFreq = (1L, TimeUnit.MINUTES)    
     override val fs = tmpLocalRoot.fs
     override val rootDir = tmpLocalRoot.root
 
@@ -287,6 +290,9 @@ class ChompTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
+        override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
+        override val nodesContentFreq = (1L, TimeUnit.MINUTES)         
         override val fs = tmpLocalRoot2.fs
         override val rootDir = tmpLocalRoot2.root
 
@@ -366,6 +372,9 @@ class ChompTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
+        override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
+        override val nodesContentFreq = (1L, TimeUnit.MINUTES)         
         override val fs = tmpLocalRoot2.fs
         override val rootDir = tmpLocalRoot2.root
 
@@ -389,6 +398,9 @@ class ChompTest extends WordSpec with ShouldMatchers {
         override val replicationBeforeVersionUpgrade = 1
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
+        override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
+        override val nodesContentFreq = (1L, TimeUnit.MINUTES) 
         override val fs = tmpLocalRoot2.fs
         override val rootDir = tmpLocalRoot2.root
 

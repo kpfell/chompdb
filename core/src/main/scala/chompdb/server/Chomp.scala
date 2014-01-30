@@ -5,7 +5,7 @@ import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
 import f1lesystem.FileSystem
 import java.io._
 import java.nio.ByteBuffer
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
 import java.util.Properties
 import scala.collection._
 
@@ -44,6 +44,9 @@ abstract class Chomp() {
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
+	val nodesServingVersionsFreq: (Long, TimeUnit)
+	val nodesAliveFreq: (Long, TimeUnit)
+	val nodesContentFreq: (Long, TimeUnit)
 	val fs: FileSystem
 	val rootDir: FileSystem#Dir
 
@@ -51,8 +54,8 @@ abstract class Chomp() {
 
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
 	@transient var numShardsPerVersion = Map.empty[(Database, Long), Int]
+	
 	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
-
 	@transient var nodesAlive = Map.empty[Node, Boolean]
 	@transient var nodesContent = Map.empty[Node, Set[DatabaseVersionShard]]
 
@@ -61,10 +64,13 @@ abstract class Chomp() {
 	def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]): String
 
 	def main(args: Array[String]) {
-		initializeAvailableShards()
 		purgeInconsistentShards()
+		initializeAvailableShards()
 		initializeServingVersions()
 		initializeNumShardsPerVersion()
+
+		scheduleNodesAlive(nodesAliveFreq._1, nodesAliveFreq._2)
+		scheduleNodesContent(nodesContentFreq._1, nodesContentFreq._2)
 	}
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
@@ -274,6 +280,26 @@ abstract class Chomp() {
 		servingVersions = databases
 			.map { db => (db, localDB(db).versionedStore.mostRecentVersion) }
 			.toMap
+	}
+
+	def scheduleNodesAlive(period: Long, unit: TimeUnit) = {
+		val task: Runnable = new Runnable() {
+			def run() {
+				updateNodesAlive()
+			}
+		}
+
+		executor.scheduleAtFixedRate(task, 0L, period, unit)
+	}
+
+	def scheduleNodesContent(period: Long, unit: TimeUnit) = {
+		val task: Runnable = new Runnable() {
+			def run() {
+				updateNodesContent()
+			}
+		}
+
+		executor.scheduleAtFixedRate(task, 0L, period, unit)
 	}
 
 	def serveVersion(database: Database, version: Option[Long]) = {
