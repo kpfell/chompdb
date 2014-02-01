@@ -8,6 +8,9 @@ import java.nio.ByteBuffer
 import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
 import java.util.Properties
 import scala.collection._
+import scala.collection.parallel.ExecutionContextTaskSupport
+import scala.concurrent.ExecutionContext
+import scala.util.control.Breaks._
 
 case class DatabaseNotFoundException(smth: String) extends Exception
 case class DatabaseNotServedException(smth: String) extends Exception
@@ -27,10 +30,6 @@ object Chomp {
 				.databases
 				.find(_.name == database)
 				.foreach { db => chomp.serveVersion(db, Some(version)) }
-		}
-
-		override def get(catalog: String, database: String, key: Long): ByteBuffer = {
-			chomp.getBlob(catalog, database, key)
 		}
 	}
 }
@@ -63,7 +62,7 @@ abstract class Chomp() {
 
 	def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]): String
 
-	def main(args: Array[String]) {
+	def start() {
 		purgeInconsistentShards()
 		initializeAvailableShards()
 		initializeServingVersions()
@@ -179,50 +178,94 @@ abstract class Chomp() {
 				to.write(reader, from.size)
 			}
 		}
+	}		
+
+	private def parallel[T](s: Seq[T]) = {
+		val pc = s.par
+		val executionContext = ExecutionContext.fromExecutor(executor)
+		pc.tasksupport = new ExecutionContextTaskSupport(executionContext)
+		pc
 	}
 
-	def getBlob(catalog: String, database: String, key: Long): ByteBuffer = {
-		val blobDatabase = databases 
+	def mapReduce[T](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T], catalog: String, database: String) = {
+		val blobDatabase = databases
 			.find { db => db.catalog.name == catalog && db.name == database }
 			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
 
 		val servedVersion = servingVersions getOrElse (
-			blobDatabase, 
+			blobDatabase,
 			throw new DatabaseNotServedException("Database $blobDatabase.name$ not currently being served.")
 		)
-		
+
 		val version = servedVersion getOrElse (
-			throw new VersionNotFoundException("Version $servedVersion$ not found.")
+			throw new VersionNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
 		)
 
-		val numShards = numShardsPerVersion getOrElse ( 
+		val numShards = numShardsPerVersion getOrElse (
 			(blobDatabase, version),
 			throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
 		)
 
-		val shard = DatabaseVersionShard(catalog, database, version, (key % numShards).toInt)
+		parallel[Long](keys) map { key => 
+			val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
 
-		val nodesServingShard = nodesContent
-			.filter { _._2 contains shard }
-			.keys
-			.toSet
+			val shardNum = (key % numShards).toInt
 
-		if (nodesServingShard contains localNode) {
 			val reader = new FileStore.Reader {
 				val baseFile: FileSystem#File = localDB(blobDatabase)
 					.versionedStore
-					.shardMarker(shard.version, shard.shard)
+					.shardMarker(version, shardNum)
 			}
 
 			val blob = reader.get(key)
 			reader.close()
+			val bbBlob = ByteBuffer.wrap(blob)
 
-			ByteBuffer.wrap(blob)
-		} else {
-			val node = nodesServingShard.toList.head
-			nodeProtocol(node).get(catalog, database, key)
+			mapReduce.map(bbBlob)
+		} reduce { mapReduce.reduce(_, _) }
+	}
+
+	def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, numShards: Int): Map[Node, Seq[Long]] = {
+		val keyToNodesServingShard = keys 
+			.map { key => 
+				val shard = DatabaseVersionShard(
+					blobDatabase.catalog.name, 
+					blobDatabase.name, 
+					version, 
+					(key % numShards).toInt
+				)
+
+				val nodesServingShard = nodesContent
+					.filter { _._2 contains shard }
+					.keys
+
+				(key, nodesServingShard)
+			}
+
+		var nodesToKeys = Map.empty[Node, Seq[Long]]
+
+		for (pair <- keyToNodesServingShard) {
+			val key = pair._1
+			var assignedNode: Option[Node] = None
+
+			breakable { for (node <- pair._2) {
+				if (!nodesToKeys.contains(node)) {
+					assignedNode = Some(node)
+					break
+				} 
+				else if (assignedNode == None) assignedNode = Some(node)
+				else if (nodesToKeys.getOrElse(node, Seq.empty).size < nodesToKeys.getOrElse(assignedNode.get, Seq.empty).size)
+					assignedNode = Some(node)
+			} }
+
+			if (nodesToKeys.contains(assignedNode.get)) {
+				val nodeKeys = nodesToKeys(assignedNode.get)
+				nodesToKeys = nodesToKeys + (assignedNode.get -> (nodeKeys :+ key))
+			} else nodesToKeys = nodesToKeys + (assignedNode.get -> Seq(key))
 		}
-	}		
+
+		nodesToKeys
+	}
 
 	def getNewVersionNumber(database: Database): Option[Long] = database
 		.versionedStore
