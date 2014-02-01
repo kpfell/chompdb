@@ -3,7 +3,7 @@ package chompdb.store
 import chompdb._
 import chompdb.sharding._
 import chompdb.testing._
-import f1lesystem.LocalFileSystem
+import f1lesystem.{ FileSystem, LocalFileSystem }
 import java.io._
 import java.util.Properties
 import org.scalatest.WordSpec
@@ -17,11 +17,25 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
   import TestUtils.byteArrayToString
   import TestUtils.createEmptyShard
 
+  val testName = "VersionedStoreTest"
+
+  val tmpRoot = new LocalFileSystem.TempRoot {
+    override val rootName = "local"
+    override lazy val root: fs.Dir = {
+      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
+      if (tmp.exists) {
+        tmp.deleteRecursively()
+      }
+      tmp.mkdir()
+      tmp
+    }
+  }  
+
   "VersionedStore" should {
 
     val vs = new VersionedStore {
-      override val fs = LocalFileSystem
-      override val root = LocalFileSystem.tempRoot(classOf[VersionedStoreTest].getSimpleName)
+      override val fs = tmpRoot.fs
+      override val root = tmpRoot.root.asInstanceOf[fs.Dir] // TODO: Remove casting
     }
 
     "create versions" in {
