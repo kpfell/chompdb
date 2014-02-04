@@ -12,21 +12,11 @@ import org.scalatest.matchers.ShouldMatchers
 class DatabaseTest extends WordSpec with ShouldMatchers {
   import TestUtils.lastShardNum
 
-    val testName = "DatabaseTest"
+  val testName = getClass.getSimpleName
 
-    val tmpLocalRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
+  val tmpLocalRoot = LocalFileSystem.tempRoot(testName) /+ "local"
 
-  val cat = Catalog("TestCatalog", tmpLocalRoot.fs, tmpLocalRoot.root)
+  val cat = Catalog("TestCatalog", tmpLocalRoot)
   val db1 = cat.database("TestDatabase1")
 
   db1.versionedStore.createVersion(1L)

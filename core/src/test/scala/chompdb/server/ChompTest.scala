@@ -7,6 +7,7 @@ import f1lesystem.{ FileSystem, LocalFileSystem }
 import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
 import scala.collection._
 import scala.collection.mutable.SynchronizedSet
+import scala.concurrent.duration._
 
 import org.mockito.Mockito.{ mock, when }
 import org.scalatest.WordSpec
@@ -20,43 +21,11 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
   val testName = "ChompTest"
 
-  val tmpLocalRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
+  val tmpLocalRoot = LocalFileSystem.tempRoot("ChompTest") /+ "local"
+  val tmpLocalRoot2 = LocalFileSystem.tempRoot("ChompGetterTest") /+ "local"
+  val tmpRemoteRoot = LocalFileSystem.tempRoot("ChompTest") /+ "remote"
 
-  val tmpLocalRoot2 = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ "ChompGetterTest" /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }  
-
-  val tmpRemoteRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "remote"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }
-
-  val catalog1 = Catalog("Catalog1", tmpRemoteRoot.fs, tmpRemoteRoot.root)
+  val catalog1 = Catalog("Catalog1", tmpRemoteRoot)
   val database1 = catalog1.database("Database1")
 
   val mockedProtocol1 = mock(classOf[NodeProtocol])
@@ -85,11 +54,10 @@ class ChompTest extends WordSpec with ShouldMatchers {
     override val replicationBeforeVersionUpgrade = 1
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
-    override val nodesServingVersionsFreq = (1L, TimeUnit.MINUTES)
-    override val nodesAliveFreq = (1L, TimeUnit.MINUTES)
-    override val nodesContentFreq = (1L, TimeUnit.MINUTES)    
-    override val fs = tmpLocalRoot.fs
-    override val rootDir = tmpLocalRoot.root
+    override val nodesServingVersionsFreq = 1.minute
+    override val nodesAliveFreq = 1.minute
+    override val nodesContentFreq = 1.minute    
+    override val rootDir = tmpLocalRoot
 
     override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
   }
@@ -102,7 +70,6 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
       database1Local.catalog.name should be === database1.catalog.name
       database1Local.name should be === database1.name
-      database1Local.catalog.fs should be === chomp.fs
       database1Local.catalog.base should be === chomp.rootDir
     }
 
@@ -238,6 +205,207 @@ class ChompTest extends WordSpec with ShouldMatchers {
         )
       )
     }
+<<<<<<< HEAD
+=======
+
+    "return a blob that is stored locally" in {
+      val catalog2 = Catalog("catalog2", tmpLocalRoot2)
+      val database3 = catalog2.database("database3")
+      database3.versionedStore.createVersion(0L)
+
+      val numThreads = 1
+
+      val writers = (0 until numThreads) map { i =>
+        new ShardedWriter {
+          val writers = numThreads
+          val writerIndex = i
+          val shardsTotal = 1
+          val baseDir: FileSystem#Dir = database3.versionedStore.versionPath(0L)
+        }
+      }
+      
+      val ids = new mutable.HashSet[Long] with SynchronizedSet[Long]
+      
+      val threads = (1 to numThreads) map { n =>
+        new Thread("ChompGetterTest") {
+          override def run() {
+            (1 to 100) foreach { x =>
+              val id = writers(n-1).put(s"This is a test: thread $n element $x")
+              ids += id
+            }            
+          }
+        }
+      }
+      
+      threads foreach { _.start() }
+      threads foreach { _.join() }
+      
+      writers foreach { _.close() }
+
+      ids should be === Set((0 until 100): _*)
+
+      database3.versionedStore.succeedVersion(0L, 1)
+
+      val mockedProtocol3 = mock(classOf[NodeProtocol])
+      when(mockedProtocol3.availableShards(database3.catalog.name, database3.name))
+        .thenReturn(Set((0L, 0)))
+
+      val getterChomp: Chomp = new Chomp {
+        override val databases = Seq(database3)
+        override val localNode = Node("Node1")
+        override val nodes = Map(Node("Node1") -> Endpoint("Endpoint1"))
+        override val nodeAlive = mock(classOf[NodeAlive])
+        override val replicationFactor = 1
+        override val replicationBeforeVersionUpgrade = 1
+        override val maxDownloadRetries = 3
+        override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = 1.minute
+        override val nodesAliveFreq = 1.minute
+        override val nodesContentFreq = 1.minute    
+        override val rootDir = tmpLocalRoot2
+        override def nodeProtocol = Map(Node("Node1") -> mockedProtocol3)
+        override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
+      }
+
+      getterChomp
+        .nodeProtocol(Node("Node1"))
+        .availableShards(database3.catalog.name, database3.name) should be === Set((0L, 0))
+
+      getterChomp.initializeAvailableShards()
+      getterChomp.initializeServingVersions()
+      getterChomp.initializeNumShardsPerVersion()
+      getterChomp.updateNodesContent()
+
+      val value = getterChomp.getBlob(database3.catalog.name, database3.name, 0L) 
+      new String(value.array()) should be === "This is a test: thread 1 element 1"
+    }
+
+    "return a blob that is stored on another node" in {
+      val catalog3 = Catalog("catalog3", tmpLocalRoot2)
+      val database4 = catalog3.database("database4")
+      database4.versionedStore.createVersion(0L)
+
+      val numThreads = 1
+
+      val writers = (0 until numThreads) map { i =>
+        new ShardedWriter {
+          val writers = numThreads
+          val writerIndex = i
+          val shardsTotal = 1
+          val baseDir: FileSystem#Dir = database4.versionedStore.versionPath(0L)
+        }
+      }
+      
+      val ids = new mutable.HashSet[Long] with SynchronizedSet[Long]
+      
+      val threads = (1 to numThreads) map { n =>
+        new Thread("ChompGetterTest") {
+          override def run() {
+            (1 to 100) foreach { x =>
+              val id = writers(n-1).put(s"This is a test: thread $n element $x")
+              ids += id
+            }            
+          }
+        }
+      }
+      
+      threads foreach { _.start() }
+      threads foreach { _.join() }
+      
+      writers foreach { _.close() }
+
+      ids should be === Set((0 until 100): _*)
+
+      database4.versionedStore.succeedVersion(0L, 1)
+
+      val mockedProtocol3 = mock(classOf[NodeProtocol])
+      when(mockedProtocol3.availableShards(database4.catalog.name, database4.name))
+        .thenReturn(Set.empty[(Long, Int)])
+
+      val mockedProtocol4 = mock(classOf[NodeProtocol])
+      when(mockedProtocol4.availableShards(database4.catalog.name, database4.name))
+        .thenReturn(Set((0L, 0)))
+
+      val getterChomp1 = new Chomp {
+        override val databases = Seq(database4)
+        override val localNode = Node("Node1")
+        override val nodes = Map(
+          Node("Node1") -> Endpoint("Endpoint1"),
+          Node("Node2") -> Endpoint("Endpoint2")
+        )  
+        override val nodeAlive = mock(classOf[NodeAlive])
+        override val replicationFactor = 1
+        override val replicationBeforeVersionUpgrade = 1
+        override val maxDownloadRetries = 3
+        override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = 1.minute
+        override val nodesAliveFreq = 1.minute
+        override val nodesContentFreq = 1.minute    
+        override val rootDir = tmpLocalRoot2
+
+        override def nodeProtocol = Map(
+          Node("Node1") -> mockedProtocol3,
+          Node("Node2") -> mockedProtocol4
+        )
+
+        override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
+      }
+
+      val getterChomp2 = new Chomp {
+        override val databases = Seq(database4)
+        override val localNode = Node("Node2")
+        override val nodes = Map(
+          Node("Node1") -> Endpoint("Endpoint1"),
+          Node("Node2") -> Endpoint("Endpoint2")
+        )
+        override val nodeAlive = mock(classOf[NodeAlive])
+        override val replicationFactor = 1
+        override val replicationBeforeVersionUpgrade = 1
+        override val maxDownloadRetries = 3
+        override val executor = mock(classOf[ScheduledExecutorService])
+        override val nodesServingVersionsFreq = 1.minute
+        override val nodesAliveFreq = 1.minute
+        override val nodesContentFreq = 1.minute    
+        override val rootDir = tmpLocalRoot2
+
+        override def nodeProtocol = Map(
+          Node("Node1") -> mockedProtocol3,
+          Node("Node2") -> mockedProtocol4
+        )
+
+        override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
+      }
+
+      getterChomp1.initializeAvailableShards()
+      getterChomp1.initializeServingVersions()
+      getterChomp1.initializeNumShardsPerVersion()
+      getterChomp1.updateNodesContent()
+
+      getterChomp2.initializeAvailableShards()
+      getterChomp2.initializeServingVersions()
+      getterChomp2.initializeNumShardsPerVersion()
+      getterChomp2.updateNodesContent()
+
+      getterChomp1
+        .nodeProtocol(Node("Node1"))
+        .availableShards(database4.catalog.name, database4.name) should be === Set.empty[(Long, Int)]
+
+      getterChomp1
+        .nodeProtocol(Node("Node2"))
+        .availableShards(database4.catalog.name, database4.name) should be === Set((0L, 0))
+
+      getterChomp2
+        .nodeProtocol(Node("Node1"))
+        .availableShards(database4.catalog.name, database4.name) should be === Set.empty[(Long, Int)]
+
+      getterChomp2
+        .nodeProtocol(Node("Node2"))
+        .availableShards(database4.catalog.name, database4.name) should be === Set((0L, 0))
+
+      val value = getterChomp2.getBlob(database4.catalog.name, database4.name, 0L) 
+      new String(value.array()) should be === "This is a test: thread 1 element 1"
+    }
+>>>>>>> upstream/master
   }
 
 }

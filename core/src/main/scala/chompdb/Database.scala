@@ -10,8 +10,7 @@ class Database(
   val name: String
 ) {
   val versionedStore = new VersionedStore {
-    override val fs = catalog.fs
-    override val root = (catalog.dir /+ name).asInstanceOf[fs.Dir] // TODO: Remove cast
+    override val root: FileSystem#Dir = catalog.dir /+ name
   }
 
   override def equals(other: Any) = other match {

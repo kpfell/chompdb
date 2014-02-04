@@ -5,12 +5,13 @@ import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
 import f1lesystem.FileSystem
 import java.io._
 import java.nio.ByteBuffer
-import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
+import java.util.concurrent.ScheduledExecutorService
 import java.util.Properties
 import scala.collection._
 import scala.collection.parallel.ExecutionContextTaskSupport
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks._
+import scala.concurrent.duration._
 
 case class DatabaseNotFoundException(smth: String) extends Exception
 case class DatabaseNotServedException(smth: String) extends Exception
@@ -43,10 +44,9 @@ abstract class Chomp() {
 	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
-	val nodesServingVersionsFreq: (Long, TimeUnit)
-	val nodesAliveFreq: (Long, TimeUnit)
-	val nodesContentFreq: (Long, TimeUnit)
-	val fs: FileSystem
+	val nodesServingVersionsFreq: Duration
+	val nodesAliveFreq: Duration
+	val nodesContentFreq: Duration
 	val rootDir: FileSystem#Dir
 
 	@transient var availableShards = Set.empty[DatabaseVersionShard]
@@ -280,7 +280,7 @@ abstract class Chomp() {
 		}
 
 	def localDB(database: Database): Database = new Database(
-		new Catalog(database.catalog.name, fs, rootDir),
+		new Catalog(database.catalog.name, rootDir),
 		database.name
 	)
 	
@@ -325,24 +325,24 @@ abstract class Chomp() {
 			.toMap
 	}
 
-	def scheduleNodesAlive(period: Long, unit: TimeUnit) = {
+	def scheduleNodesAlive(duration: Duration) = {
 		val task: Runnable = new Runnable() {
 			def run() {
 				updateNodesAlive()
 			}
 		}
 
-		executor.scheduleAtFixedRate(task, 0L, period, unit)
+		executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
 	}
 
-	def scheduleNodesContent(period: Long, unit: TimeUnit) = {
+	def scheduleNodesContent(duration: Duration) = {
 		val task: Runnable = new Runnable() {
 			def run() {
 				updateNodesContent()
 			}
 		}
 
-		executor.scheduleAtFixedRate(task, 0L, period, unit)
+		executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
 	}
 
 	def serveVersion(database: Database, version: Option[Long]) = {

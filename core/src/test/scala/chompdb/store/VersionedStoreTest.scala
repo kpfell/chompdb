@@ -17,25 +17,15 @@ class VersionedStoreTest extends WordSpec with ShouldMatchers with OneInstancePe
   import TestUtils.byteArrayToString
   import TestUtils.createEmptyShard
 
-  val testName = "VersionedStoreTest"
+  val testName = getClass.getSimpleName
 
-  val tmpRoot = new LocalFileSystem.TempRoot {
-    override val rootName = "local"
-    override lazy val root: fs.Dir = {
-      val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-      if (tmp.exists) {
-        tmp.deleteRecursively()
-      }
-      tmp.mkdir()
-      tmp
-    }
-  }  
-
+  val tmpRoot = LocalFileSystem.tempRoot(testName) /+ "local"
+  tmpRoot.mkdir()
+  
   "VersionedStore" should {
 
     val vs = new VersionedStore {
-      override val fs = tmpRoot.fs
-      override val root = tmpRoot.root.asInstanceOf[fs.Dir] // TODO: Remove casting
+      override val root = tmpRoot
     }
 
     "create versions" in {

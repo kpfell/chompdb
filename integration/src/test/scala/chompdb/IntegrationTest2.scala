@@ -13,7 +13,7 @@ object IntegrationTest extends App {
   
   val tmp = LocalFileSystem.parseDirectory(System.getProperty("java.io.tmpdir"))
 
-  val catalog = Catalog("catalog1", LocalFileSystem, tmp /+ "catalog")
+  val catalog = Catalog("catalog1", tmp /+ "catalog")
   
   val params = Params(
     Seq(new Database(catalog, "database1")-> DatabaseParams(
@@ -52,7 +52,6 @@ object IntegrationTest extends App {
     override val replicationBeforeVersionUpgrade: Int = 2
     override val maxDownloadRetries: Int = 10
     override val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(5)
-    override val fs: FileSystem = LocalFileSystem
     override val rootDir: FileSystem#Dir = tmp /+ "server" /+ index.toString
   
     override val nodeProtocol: Map[Node, NodeProtocol] = nodes map { case (node, endpoint) => node -> new NodeProtocol {

@@ -14,19 +14,10 @@ class ShardedStoreTest extends WordSpec with ShouldMatchers {
   import TestUtils.byteArrayToString
 
   trait TestShardedStore extends ShardedWriter {
-    val testName = "ShardedStoreTest"
-    val tmpLocalRoot = new LocalFileSystem.TempRoot {
-      override val rootName = "local"
-      override lazy val root: fs.Dir = {
-        val tmp = fs.parseDirectory(System.getProperty("java.io.tmpdir")) /+ testName /+ rootName
-        if (tmp.exists) {
-          tmp.deleteRecursively()
-        }
-        tmp.mkdir()
-        tmp
-      }
-    }
-    override val baseDir = tmpLocalRoot.root
+    val testName = classOf[ShardedStoreTest].getSimpleName
+    val tmpLocalRoot = LocalFileSystem.tempRoot(testName) /+ "local"
+    override val baseDir = tmpLocalRoot
+    tmpLocalRoot.mkdir()
   }
 
   def newShardedWriter(f: ShardedWriter => Unit) = {
