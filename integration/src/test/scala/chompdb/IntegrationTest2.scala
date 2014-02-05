@@ -61,9 +61,6 @@ object IntegrationTest extends App {
           case a if (a.catalog == catalog && a.database == database) => (a.version, a.shard)
         } toSet
       }
-      override def get(catalog: String, database: String, key: Long): ByteBuffer = {
-        sys.error("not what we want...")
-      }
       override def serveVersion(catalog: String, database: String, version: Long): Unit = {
         sys.error("do we need this?")
       }
