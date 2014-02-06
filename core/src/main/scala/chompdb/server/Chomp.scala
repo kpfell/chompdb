@@ -12,6 +12,7 @@ import scala.collection.parallel.ExecutionContextTaskSupport
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks._
 import scala.concurrent.duration._
+import scala.reflect.runtime.universe._
 
 case class DatabaseNotFoundException(smth: String) extends Exception
 case class DatabaseNotServedException(smth: String) extends Exception
@@ -31,6 +32,12 @@ object Chomp {
 				.databases
 				.find(_.name == database)
 				.foreach { db => chomp.serveVersion(db, Some(version)) }
+		}
+
+		override def mapReduce(catalog: String, database: String, version: Long, 
+				ids: Seq[Long], mapReduce: String): Array[Byte] = {
+			val result = chomp mapReduce (ids, chomp.deserializeMapReduce(mapReduce), catalog, database)
+			chomp.serializeMapReduceResult(result)
 		}
 	}
 }
@@ -61,6 +68,12 @@ abstract class Chomp() {
 	def nodeProtocol: Map[Node, NodeProtocol]
 
 	def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]): String
+
+  def deserializeMapReduce(mapReduce: String): MapReduce[ByteBuffer, _]
+
+	def serializeMapReduceResult(result: Any): Array[Byte]
+
+  def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
 	def start() {
 		purgeInconsistentShards()
@@ -187,7 +200,7 @@ abstract class Chomp() {
 		pc
 	}
 
-	def mapReduce[T](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T], catalog: String, database: String) = {
+	def mapReduce[T: TypeTag](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T], catalog: String, database: String) = {
 		val blobDatabase = databases
 			.find { db => db.catalog.name == catalog && db.name == database }
 			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
@@ -206,23 +219,12 @@ abstract class Chomp() {
 			throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
 		)
 
-		parallel[Long](keys) map { key => 
-			val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
+		val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
 
-			val shardNum = (key % numShards).toInt
-
-			val reader = new FileStore.Reader {
-				val baseFile: FileSystem#File = localDB(blobDatabase)
-					.versionedStore
-					.shardMarker(version, shardNum)
-			}
-
-			val blob = reader.get(key)
-			reader.close()
-			val bbBlob = ByteBuffer.wrap(blob)
-
-			mapReduce.map(bbBlob)
-		} reduce { mapReduce.reduce(_, _) }
+		keysToNodes.par map { case (node, ids) =>
+			val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
+			deserializeMapReduceResult[T](serializedResult)
+		} reduce { (t1, t2) => mapReduce.reduce(t1, t2) }
 	}
 
 	def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, numShards: Int): Map[Node, Seq[Long]] = {

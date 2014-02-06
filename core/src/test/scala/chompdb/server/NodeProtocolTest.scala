@@ -7,7 +7,13 @@ import chompdb.testing.TestUtils.createEmptyShard
 import f1lesystem.LocalFileSystem
 
 import java.util.concurrent.ScheduledExecutorService
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import java.io.IOException
+import java.io.{ ObjectInputStream, ObjectOutputStream }
+import java.nio.ByteBuffer
 import scala.concurrent.duration._
+import scala.reflect.runtime.universe._
+
 
 import org.mockito.Mockito.{ mock, verify, when }
 import org.scalatest.WordSpec
@@ -55,6 +61,30 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override def nodeProtocol = nodeProtocols
 
         override def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]) = "identity"
+              
+        override def deserializeMapReduce(mapReduce: String): MapReduce[ByteBuffer, _] = mapReduce match {
+          case "identity" => new MapReduce[ByteBuffer, Seq[ByteBuffer]] {
+            def map(t: ByteBuffer) = Seq(t)
+            def reduce(t1: Seq[ByteBuffer], t2: Seq[ByteBuffer]): Seq[ByteBuffer] = t1 ++ t2
+          }
+        }
+
+        @throws(classOf[IOException])
+        override def serializeMapReduceResult(result: Any): Array[Byte] = {
+          val b = new ByteArrayOutputStream()
+          val o = new ObjectOutputStream(b)
+          o.writeObject(result)
+          o.flush()
+          o.close()
+          b.toByteArray()
+        }
+
+        @throws(classOf[IOException])
+        override def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T = {
+          val b = new ByteArrayInputStream(result)
+          val o = new ObjectInputStream(b)
+          o.readObject().asInstanceOf[T]
+        }
       }
   }
 
