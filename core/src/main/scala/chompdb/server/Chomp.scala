@@ -47,6 +47,7 @@ abstract class Chomp() {
 	val nodesServingVersionsFreq: Duration
 	val nodesAliveFreq: Duration
 	val nodesContentFreq: Duration
+	val servingVersionsFreq: Duration
 	val rootDir: FileSystem#Dir
 
 	@transient var availableShards = Set.empty[DatabaseVersionShard]
@@ -76,6 +77,7 @@ abstract class Chomp() {
 
 		scheduleNodesAlive(nodesAliveFreq._1, nodesAliveFreq._2)
 		scheduleNodesContent(nodesContentFreq._1, nodesContentFreq._2)
+		// scheduleServingVersions(servingVersionFreq._1, servingVersionFreq._2)
 	}
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
@@ -340,6 +342,16 @@ abstract class Chomp() {
 		executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
 	}
 
+	def scheduleServingVersions(duration: Duration) = {
+		val task: Runnable = new Runnable() {
+			def run() {
+				updateServingVersions()
+			}
+		}
+
+		executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
+	}
+
 	def serveVersion(database: Database, version: Option[Long]) = {
 		servingVersions = servingVersions + (database -> version)
 	}
@@ -369,5 +381,36 @@ abstract class Chomp() {
 				.toSet
 			}
 			.toMap
+	}
+
+	def updateServingVersions() {
+	  val latestLocalVersions = databases
+	    .map { db => (db.catalog.name, db.name) -> localDB(db).versionedStore.mostRecentVersion }
+	    .toMap
+
+	  val latestShardsInNetwork = nodesContent
+	    .values
+	    .toList
+	    .flatten
+	    .filter { s => s.version == latestLocalVersions.getOrElse((s.catalog, s.database), -100) }
+	  
+	  val shardsInNetworkByDBV = latestShardsInNetwork
+	    .groupBy { s => (s.catalog, s.database, s.version) }
+	    .map { case ((c, db, version), shardList) =>  ((c, db, version), shardList groupBy { _.shard }) }
+	    .toMap
+
+	  val dbvToShardCounts = shardsInNetworkByDBV
+	    .map { case ((c, db, version), shardMap) => (c, db, version) -> shardMap
+	      .values
+	      .map { s => s.size }
+	      .filter { _ < replicationBeforeVersionUpgrade }
+	    }
+	  
+	  dbvToShardCounts foreach { case ((c, db, version), shardCounts) =>
+	    if (shardCounts.size == 0) {
+	      val servedDb = databases find { d => d.catalog.name == c && d.name == db }
+	      if (!servedDb.isEmpty) serveVersion(servedDb.get, Some(version))
+	    }
+	  }
 	}
 }

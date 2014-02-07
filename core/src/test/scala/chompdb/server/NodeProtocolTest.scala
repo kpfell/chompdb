@@ -55,7 +55,8 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val executor = mock(classOf[ScheduledExecutorService])
         override val nodesServingVersionsFreq = 1.minute
         override val nodesAliveFreq = 1.minute
-        override val nodesContentFreq = 1.minute    
+        override val nodesContentFreq = 1.minute  
+        override val servingVersionsFreq = 1.minute  
         override val rootDir = tmpLocalRoot
 
         override def nodeProtocol = nodeProtocols
