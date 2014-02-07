@@ -27,13 +27,6 @@ object Chomp {
 				.filter(_.database == database)
 				.map { dbvs => (dbvs.version, dbvs.shard) }
 
-		override def serveVersion(catalog: String, database: String, version: Long) {
-			chomp
-				.databases
-				.find(_.name == database)
-				.foreach { db => chomp.serveVersion(db, Some(version)) }
-		}
-
 		override def mapReduce(catalog: String, database: String, version: Long, 
 				ids: Seq[Long], mapReduce: String): Array[Byte] = {
 			val result = chomp mapReduce (ids, chomp.deserializeMapReduce(mapReduce), catalog, database)
