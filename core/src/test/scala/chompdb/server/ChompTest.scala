@@ -94,6 +94,34 @@ class ChompTest extends WordSpec with ShouldMatchers {
   "Chomp" should {
     /* main method */
 
+  "serialize a MapReduce function to a string" in {
+    val mr = new MapReduce[ByteBuffer, Seq[ByteBuffer]] {
+      def map(t: ByteBuffer) = Seq(t)
+      def reduce(t1: Seq[ByteBuffer], t2: Seq[ByteBuffer]): Seq[ByteBuffer] = t1 ++ t2
+    }
+
+    chomp.serializeMapReduce[ByteBuffer, Seq[ByteBuffer]](mr) should be === "identity"
+  }
+
+  "deserialize a string to a MapReduce function" in {
+    val deserializedMR = chomp.deserializeMapReduce("identity")
+
+    val mr = new MapReduce[ByteBuffer, Seq[ByteBuffer]] {
+      def map(t: ByteBuffer) = Seq(t)
+      def reduce(t1: Seq[ByteBuffer], t2: Seq[ByteBuffer]): Seq[ByteBuffer] = t1 ++ t2
+    }
+
+    deserializedMR.isInstanceOf[MapReduce[ByteBuffer, Seq[ByteBuffer]]] should be === true
+  }
+
+  "serialize and deserialize a MapReduce result to and from a byte array" in {
+    val result = Seq(1, 2, 3)
+    val serializedResult = chomp.serializeMapReduceResult(result)
+    val deserializedResult = chomp.deserializeMapReduceResult[Seq[Int]](serializedResult)
+
+    deserializedResult should be === result
+  } 
+
     "given a database, reference a local version of that database" in {
       val database1Local = chomp.localDB(database1)
 
