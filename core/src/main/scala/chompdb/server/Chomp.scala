@@ -44,7 +44,6 @@ abstract class Chomp() {
 	val replicationBeforeVersionUpgrade: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
-	val nodesServingVersionsFreq: Duration
 	val nodesAliveFreq: Duration
 	val nodesContentFreq: Duration
 	val servingVersionsFreq: Duration
@@ -55,7 +54,6 @@ abstract class Chomp() {
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
 	@transient var numShardsPerVersion = Map.empty[(Database, Long), Int]
 	
-	@transient var nodesServingVersions = Map.empty[Node, Map[Database, Option[Long]]]
 	@transient var nodesAlive = Map.empty[Node, Boolean]
 	@transient var nodesContent = Map.empty[Node, Set[DatabaseVersionShard]]
 

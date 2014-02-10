@@ -7,7 +7,6 @@ trait DatabaseServer extends Chomp {
   
   val params: Params
 
-  override val nodesServingVersionsFreq = 1.minute
   override val nodesAliveFreq = 1.minute
   override val nodesContentFreq = 1.minute    
   
