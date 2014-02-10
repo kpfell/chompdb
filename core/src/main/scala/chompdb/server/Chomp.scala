@@ -40,7 +40,7 @@ object Chomp {
 				throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
 			)
 
-			val result = ids map { id => 
+			val result = ids.par map { id => 
 				val shard = DatabaseVersionShard(catalog, database, version, (id % numShards).toInt)
 
 				val reader = new FileStore.Reader {
