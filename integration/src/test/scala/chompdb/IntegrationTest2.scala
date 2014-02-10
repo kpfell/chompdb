@@ -61,9 +61,6 @@ object IntegrationTest extends App {
           case a if (a.catalog == catalog && a.database == database) => (a.version, a.shard)
         } toSet
       }
-      override def serveVersion(catalog: String, database: String, version: Long): Unit = {
-        sys.error("do we need this?")
-      }
     }} toMap;
     
   }

@@ -38,10 +38,10 @@ object Chomp {
 abstract class Chomp() {
 	val databases: Seq[Database]
 	val localNode: Node
-	val nodes: Map[Node, Endpoint] 
+	val nodes: Map[Node, Endpoint]
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
-	val replicationBeforeVersionUpgrade: Int // TODO: Come up with a better name
+	val replicationBeforeVersionUpgrade: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val nodesServingVersionsFreq: Duration
@@ -69,15 +69,15 @@ abstract class Chomp() {
 
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
-	def start() {
+	def run() {
 		purgeInconsistentShards()
 		initializeAvailableShards()
 		initializeServingVersions()
 		initializeNumShardsPerVersion()
 
-		scheduleNodesAlive(nodesAliveFreq._1, nodesAliveFreq._2)
-		scheduleNodesContent(nodesContentFreq._1, nodesContentFreq._2)
-		// scheduleServingVersions(servingVersionFreq._1, servingVersionFreq._2)
+		scheduleNodesAlive(nodesAliveFreq)
+		scheduleNodesContent(nodesContentFreq)
+		scheduleServingVersions(servingVersionsFreq)
 	}
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
