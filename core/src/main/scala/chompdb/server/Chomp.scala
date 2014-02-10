@@ -29,7 +29,34 @@ object Chomp {
 
 		override def mapReduce(catalog: String, database: String, version: Long, 
 				ids: Seq[Long], mapReduce: String): Array[Byte] = {
-			val result = chomp mapReduce (ids, chomp.deserializeMapReduce(mapReduce), catalog, database)
+			val mr = chomp.deserializeMapReduce(mapReduce)
+
+			val blobDatabase = chomp.databases
+				.find { db => db.catalog.name == catalog && db.name == database }
+				.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
+
+			val numShards = chomp.numShardsPerVersion getOrElse (
+				(blobDatabase, version),
+				throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
+			)
+
+			val result = ids map { id => 
+				val shard = DatabaseVersionShard(catalog, database, version, (id % numShards).toInt)
+
+				val reader = new FileStore.Reader {
+					val baseFile: FileSystem#File = chomp
+						.localDB(blobDatabase)
+						.versionedStore
+						.shardMarker(shard.version, shard.shard)
+				}
+
+				val blob = reader.get(id)
+				reader.close()
+
+				val bbBlob = ByteBuffer.wrap(blob)
+				mr.map(bbBlob)
+			}
+
 			chomp.serializeMapReduceResult(result)
 		}
 	}
