@@ -8,7 +8,7 @@ import java.util.concurrent.Executors
 import scala.concurrent.duration._
 import chompdb.server.SlapChop
 
-object IntegrationTest extends App {
+object SmokeTest extends App {
   import Utils._
 
   val tmp = LocalFileSystem.parseDirectory(System.getProperty("java.io.tmpdir"))
@@ -24,7 +24,7 @@ object IntegrationTest extends App {
   )
 
   val creator = new DatabaseCreator {
-    override val params = IntegrationTest.params
+    override val params = SmokeTest.params
     override val localDir = tmp /+ "local"
     override val delayBetweenVersions = 30.seconds
     override val numThreads = 2
@@ -39,11 +39,11 @@ object IntegrationTest extends App {
   val servers: Map[Node, DatabaseServer] = nodes map { case (node, endpoint) => node -> server(node.id.toInt, node) }
 
   def server(index: Int, node: Node) = new DatabaseServer {
-    override val params = IntegrationTest.params
+    override val params = SmokeTest.params
 
-    override val databases: Seq[Database] = IntegrationTest.params.databases map (_._1)
+    override val databases: Seq[Database] = SmokeTest.params.databases map (_._1)
     override val localNode: Node = node
-    override val nodes: Map[Node, Endpoint] = IntegrationTest.nodes
+    override val nodes: Map[Node, Endpoint] = SmokeTest.nodes
     override val nodeAlive: NodeAlive = new NodeAlive {
       override def isAlive(node: Node) = true
       override def imAlive() = () // no-op
@@ -89,9 +89,9 @@ object IntegrationTest extends App {
   val client = new DatabaseClient {
     override val delayBetweenQueries = 5.seconds
     override val blocksPerQueryRange: (Int, Int) = (1, 10)
-    override val servers: Seq[SlapChop] = IntegrationTest.servers.values.toSeq
+    override val servers: Seq[SlapChop] = SmokeTest.servers.values.toSeq
     override val numClients = 1
-    override val params = IntegrationTest.params
+    override val params = SmokeTest.params
     override val scheduledExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(5)
   }
   client.run()
