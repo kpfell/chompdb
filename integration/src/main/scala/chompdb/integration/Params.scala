@@ -12,8 +12,8 @@ case class Params(
 
 case class DatabaseParams(
   /** Number of key-value pairs to generate per database */
-  val nElements: Long, 
-  
+  val nElements: Long,
+
   val shardsTotal: Int,
 
   val blobSizeRange: (Int, Int)
