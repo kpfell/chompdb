@@ -1,6 +1,9 @@
 package chompdb.server
 
 import java.nio.ByteBuffer
+import scala.reflect.runtime.universe._
+import scala.collection._
+
 
 @serializable
 trait Mapper[T, U] {
@@ -20,7 +23,7 @@ trait MapReduce[T, U] extends Mapper[T, U] with Reducer[U]
 
 /** A remoting key-value store exposing map-reduce push-down processing */
 trait SlapChop {
-  def apply[T](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]): T
+  def mapReduce[T: TypeTag](catalog: String, database: String, keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]): T
 }
 
 

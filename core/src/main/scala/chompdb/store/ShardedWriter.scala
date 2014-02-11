@@ -20,7 +20,7 @@ trait ShardedWriter extends Store.Writer {
 
   private[chompdb] lazy val shardWriters = ownedShards map { shardId =>
     new FileStore.Writer {
-      override val baseFile: FileSystem#File = baseDir / shardId.toString
+      override lazy val baseFile: FileSystem#File = baseDir / shardId.toString
       override val shards = new Sharded {
         val shardsIndex = shardId
         val shardsTotal = ShardedWriter.this.shardsTotal
