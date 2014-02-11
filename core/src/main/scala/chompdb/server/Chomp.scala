@@ -54,7 +54,7 @@ object Chomp {
 				reader.close()
 
 				val bbBlob = ByteBuffer.wrap(blob)
-				val mapped: Any = mr.map(bbBlob)
+				mr.map(bbBlob)
 
 			} reduce { mr.reduce(_, _) }
 
