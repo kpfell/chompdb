@@ -29,7 +29,7 @@ object Chomp {
 
 		override def mapReduce(catalog: String, database: String, version: Long, 
 				ids: Seq[Long], mapReduce: String): Array[Byte] = {
-			val mr = chomp.deserializeMapReduce(mapReduce)
+			val mr = chomp.deserializeMapReduce(mapReduce).asInstanceOf[MapReduce[ByteBuffer, Any]]
 
 			val blobDatabase = chomp.databases
 				.find { db => db.catalog.name == catalog && db.name == database }
@@ -54,8 +54,9 @@ object Chomp {
 				reader.close()
 
 				val bbBlob = ByteBuffer.wrap(blob)
-				mr.map(bbBlob)
-			}
+				val mapped: Any = mr.map(bbBlob)
+
+			} reduce { mr.reduce(_, _) }
 
 			chomp.serializeMapReduceResult(result)
 		}
