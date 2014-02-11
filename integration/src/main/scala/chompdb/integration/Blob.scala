@@ -10,10 +10,10 @@ object Blob {
     index: Int,
     size: Int
   )
-  
+
   private val random = new RandomUtils(); import random._
-  
-  /** Generate a blob of `size` including encoded including database, version and arbitrary `n` value */ 
+
+  /** Generate a blob of `size` including encoded including database, version and arbitrary `n` value */
   def apply(data: Data): Array[Byte] = {
     import data._
     val baos = new ByteArrayOutputStream(size + 1024)
@@ -26,19 +26,19 @@ object Blob {
     out.write(filler(size), 0, size)
     baos.toByteArray()
   }
-  
+
   def unapply(buf: Array[Byte]) = {
     val bais = new ByteArrayInputStream(buf)
     val in = new DataInputStream(bais)
-    
+
     val database = in.readUTF()
     val version  = in.readLong()
     val writer   = in.readInt()
     val index    = in.readInt()
     val size     = in.readInt()
-    
+
     // TODO: validate filler
-    
+
     Data(database, version, writer, index, size)
   }
 
