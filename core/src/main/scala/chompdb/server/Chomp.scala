@@ -63,7 +63,7 @@ object Chomp {
 	}
 }
 
-abstract class Chomp() {
+abstract class Chomp extends SlapChop {
 	val databases: Seq[Database]
 	val localNode: Node
 	val nodes: Map[Node, Endpoint]
