@@ -40,7 +40,7 @@ object Chomp {
 				throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
 			)
 
-			val result = ids.par map { id => 
+			val result = parSeq(ids) map { id => 
 				val shard = DatabaseVersionShard(catalog, database, version, (id % numShards).toInt)
 
 				val reader = new FileStore.Reader {
@@ -59,6 +59,13 @@ object Chomp {
 			} reduce { mr.reduce(_, _) }
 
 			chomp.serializeMapReduceResult(result)
+		}
+
+		private def parSeq[T](s: Seq[T]) = {
+			val pc = s.par
+			val executionContext = ExecutionContext.fromExecutor(chomp.executor)
+			pc.tasksupport = new ExecutionContextTaskSupport(executionContext)
+			pc
 		}
 	}
 }
@@ -97,16 +104,30 @@ abstract class Chomp extends SlapChop {
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
 	def run() {
-		purgeInconsistentShards()
-		initializeAvailableShards()
-		initializeServingVersions()
-		initializeNumShardsPerVersion()
-
 		for (database <- databases) {
+			println("Scheduling updates for database $database ...")
 			scheduleDatabaseUpdate(databaseUpdateFreq, database)
 		}
+
+		println("Purging inconsistent shards ...")
+		purgeInconsistentShards()
+		
+		println("Initializing shards available locally ...")
+		initializeAvailableShards()
+
+		println("Initializing versions to be served locally ...")
+		initializeServingVersions()
+
+		println("Initializing number of shards across network for versions ...")
+		initializeNumShardsPerVersion()
+
+		println("Scheduling updates for NodesAlive ...")
 		scheduleNodesAlive(nodesAliveFreq)
+		
+		println("Scheduling updates for NodesContent ...")
 		scheduleNodesContent(nodesContentFreq)
+		
+		println("Scheduling updates for versions being served locally ...")
 		scheduleServingVersions(servingVersionsFreq)
 	}
 
@@ -216,10 +237,10 @@ abstract class Chomp extends SlapChop {
 				to.write(reader, from.size)
 			}
 		}
-	}		
+	}
 
-	private def parallel[T](s: Seq[T]) = {
-		val pc = s.par
+	private def parMap[T, U](m: Map[T, U]) = {
+		val pc = m.par
 		val executionContext = ExecutionContext.fromExecutor(executor)
 		pc.tasksupport = new ExecutionContextTaskSupport(executionContext)
 		pc
@@ -246,7 +267,7 @@ abstract class Chomp extends SlapChop {
 
 		val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
 
-		keysToNodes.par map { case (node, ids) =>
+		parMap(keysToNodes) map { case (node, ids) =>
 			val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
 			deserializeMapReduceResult[T](serializedResult)
 		} reduce { (t1, t2) => mapReduce.reduce(t1, t2) }
