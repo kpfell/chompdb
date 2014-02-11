@@ -221,7 +221,7 @@ abstract class Chomp extends SlapChop {
 		pc
 	}
 
-	def mapReduce[T: TypeTag](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T], catalog: String, database: String) = {
+	def mapReduce[T: TypeTag](catalog: String, database: String, keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]) = {
 		val blobDatabase = databases
 			.find { db => db.catalog.name == catalog && db.name == database }
 			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
