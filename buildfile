@@ -28,6 +28,6 @@ define "chompdb" do
   desc "Integration/Smoke testing"
   define "integration" do
     compile.with project("core"), project("core").compile.dependencies
-    run.using :main => "chomp.integration.IntegrationTest"
+    run.using :main => "chompdb.integration.SmokeTest"
   end
 end
