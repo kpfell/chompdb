@@ -72,6 +72,7 @@ abstract class Chomp extends SlapChop {
 	val replicationBeforeVersionUpgrade: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
+	val databaseUpdateFreq: Duration
 	val nodesAliveFreq: Duration
 	val nodesContentFreq: Duration
 	val servingVersionsFreq: Duration
@@ -101,6 +102,9 @@ abstract class Chomp extends SlapChop {
 		initializeServingVersions()
 		initializeNumShardsPerVersion()
 
+		for (database <- databases) {
+			scheduleDatabaseUpdate(databaseUpdateFreq, database)
+		}
 		scheduleNodesAlive(nodesAliveFreq)
 		scheduleNodesContent(nodesContentFreq)
 		scheduleServingVersions(servingVersionsFreq)
@@ -346,6 +350,16 @@ abstract class Chomp extends SlapChop {
 		servingVersions = databases
 			.map { db => (db, localDB(db).versionedStore.mostRecentVersion) }
 			.toMap
+	}
+
+	def scheduleDatabaseUpdate(duration: Duration, database: Database) = {
+		val task: Runnable = new Runnable() {
+			def run() {
+				updateDatabase(database)
+			}
+		}
+
+		executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
 	}
 
 	def scheduleNodesAlive(duration: Duration) = {
