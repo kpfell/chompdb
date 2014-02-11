@@ -19,4 +19,6 @@ class Catalog(
   override def equals(other: Any) = other match {
     case c: Catalog => (c.name == name)
   }
+
+  override def toString = s"Catalog($name, $base)"
 }

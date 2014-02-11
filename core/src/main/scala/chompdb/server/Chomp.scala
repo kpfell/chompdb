@@ -29,13 +29,13 @@ object Chomp {
 
 		override def mapReduce(catalog: String, database: String, version: Long, 
 				ids: Seq[Long], mapReduce: String): Array[Byte] = {
-			val result = chomp mapReduce (ids, chomp.deserializeMapReduce(mapReduce), catalog, database)
+			val result = chomp mapReduce (catalog, database, ids, chomp.deserializeMapReduce(mapReduce))
 			chomp.serializeMapReduceResult(result)
 		}
 	}
 }
 
-abstract class Chomp() {
+abstract class Chomp extends SlapChop {
 	val databases: Seq[Database]
 	val localNode: Node
 	val nodes: Map[Node, Endpoint]
@@ -193,7 +193,7 @@ abstract class Chomp() {
 		pc
 	}
 
-	def mapReduce[T: TypeTag](keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T], catalog: String, database: String) = {
+	override def mapReduce[T: TypeTag](catalog: String, database: String, keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]) = {
 		val blobDatabase = databases
 			.find { db => db.catalog.name == catalog && db.name == database }
 			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }

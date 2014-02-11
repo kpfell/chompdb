@@ -21,4 +21,5 @@ class Database(
     .shardNumsForVersion(version)
     .map { shardNum => DatabaseVersionShard(catalog.name, name, version, shardNum) }
 
+  override def toString = s"Database($name; $catalog)"
 }

@@ -11,6 +11,7 @@ object FileStore {
     val baseFile: FileSystem#File
 
     private def file(extension: String) = baseFile.parent / s"${baseFile.basename}.$extension"
+
     lazy val blobFile  = file("blob")
     lazy val indexFile = file("index")
     
