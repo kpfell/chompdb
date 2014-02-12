@@ -4,7 +4,7 @@ import scala.collection.immutable.TreeMap
 
 case class NodeNotFoundException(smth: String) extends Exception
 
-trait HashRing {
+class HashRing {
   @transient var nodeMap = TreeMap.empty[Int, Node]
 
   def addNode(node: Node) = {
@@ -24,5 +24,12 @@ trait HashRing {
           .get._2
         }
     } 
+  }
+
+  def initialize(nodes: Set[Node]) {
+    nodes foreach { n =>
+      val nodeHashValue = Hashing.hash(n.id)
+      nodeMap = nodeMap + (nodeHashValue -> n)
+    }
   }
 }

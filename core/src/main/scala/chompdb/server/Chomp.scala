@@ -85,6 +85,8 @@ abstract class Chomp extends SlapChop {
 	val servingVersionsFreq: Duration
 	val rootDir: FileSystem#Dir
 
+	val hashRing = new HashRing
+
 	@transient var availableShards = Set.empty[DatabaseVersionShard]
 
 	@transient var servingVersions = Map.empty[Database, Option[Long]]
@@ -104,39 +106,48 @@ abstract class Chomp extends SlapChop {
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
 	def run() {
+		println(s"Initializing hash ring for $localNode ...")
+		hashRing.initialize(nodes.keys.toSet)
+
 		for (database <- databases) {
-			println("Scheduling updates for database $database ...")
+			println(s"Scheduling updates for database $database on $localNode ...")
 			scheduleDatabaseUpdate(databaseUpdateFreq, database)
 		}
 
-		println("Purging inconsistent shards ...")
+		println(s"Purging inconsistent shards on $localNode ...")
 		purgeInconsistentShards()
 		
-		println("Initializing shards available locally ...")
+		println(s"Initializing shards available locally on $localNode ...")
 		initializeAvailableShards()
 
-		println("Initializing versions to be served locally ...")
+		println(s"Initializing versions to be served locally on $localNode ...")
 		initializeServingVersions()
 
-		println("Initializing number of shards across network for versions ...")
+		println(s"Initializing number of shards across network for versions on $localNode ...")
 		initializeNumShardsPerVersion()
 
-		println("Scheduling updates for NodesAlive ...")
+		println(s"Scheduling updates for NodesAlive on $localNode ...")
 		scheduleNodesAlive(nodesAliveFreq)
 		
-		println("Scheduling updates for NodesContent ...")
+		println(s"Scheduling updates for NodesContent on $localNode...")
 		scheduleNodesContent(nodesContentFreq)
 		
-		println("Scheduling updates for versions being served locally ...")
+		println(s"Scheduling updates for versions being served locally on $localNode ...")
 		scheduleServingVersions(servingVersionsFreq)
 	}
 
 	def downloadDatabaseVersion(database: Database, version: Long) = {
+		println(s"Downloading database $database version $version to $localNode ...")
+
 		val remoteDir = database.versionedStore.versionPath(version)
 		val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
 		// TODO: This "fails" silently if the version does not exist.
 		if (remoteVersionMarker.exists) {
+			val rvmFullpath = remoteVersionMarker.fullpath
+
+			println(s"Remote version marker found by $localNode at $rvmFullpath")
+
 			val rvmInput = new FileInputStream(remoteVersionMarker.fullpath)
 			val props = new Properties()
 			props.load(rvmInput)
@@ -152,6 +163,7 @@ abstract class Chomp extends SlapChop {
 				props.store(rvmOutput, null)
 				rvmOutput.close()
 
+				println(s"$localNode succeeding shardIndex $shardIndex for remote version $version ...")
 				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
 			} else {
 				props.put("highestShardIndex", shardIndex.toString)
@@ -159,15 +171,21 @@ abstract class Chomp extends SlapChop {
 				props.store(rvmOutput, null)
 				rvmOutput.close()
 
+				println(s"$localNode succeeding shardIndex $shardIndex for remote version $version ...")
 				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
 			}
 
 			val localDB = Chomp.this.localDB(database)
+			println(s"Created local version of $database on $localNode")
 			// TODO: What does createVersion do if there already exists a version there?
+			println(s"Creating version $version locally on $localNode ...")
 			val localDir = localDB.versionedStore.createVersion(version)
 
 			// TODO: This "fails" silently if the number of max retries is reached
+			println(s"Deleting incomplete shards for $localNode in $localDir ...")
 			deleteIncompleteShards(localDir)
+			
+			println(s"Copying shards from $remoteDir to $localDir with shardIndex $shardIndex ...")
 			copyShards(remoteDir, localDir, 0, shardIndex) foreach { numRetries =>
 				if (numRetries < maxDownloadRetries) {
 					deleteIncompleteShards(localDir)
