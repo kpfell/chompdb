@@ -94,7 +94,6 @@ object SmokeTest extends App {
     override val params = SmokeTest.params
     override val scheduledExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(5)
   }
-  
   client.run()
 
   Thread.sleep(60.seconds.toMillis)
