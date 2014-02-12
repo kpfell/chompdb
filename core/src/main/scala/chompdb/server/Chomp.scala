@@ -106,39 +106,22 @@ abstract class Chomp extends SlapChop {
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
 	def run() {
-		println(s"Initializing hash ring for $localNode ...")
 		hashRing.initialize(nodes.keys.toSet)
 
 		for (database <- databases) {
-			println(s"Scheduling updates for database $database on $localNode ...")
 			scheduleDatabaseUpdate(databaseUpdateFreq, database)
 		}
 
-		println(s"Purging inconsistent shards on $localNode ...")
 		purgeInconsistentShards()
-		
-		println(s"Initializing shards available locally on $localNode ...")
 		initializeAvailableShards()
-
-		println(s"Initializing versions to be served locally on $localNode ...")
 		initializeServingVersions()
-
-		println(s"Initializing number of shards across network for versions on $localNode ...")
 		initializeNumShardsPerVersion()
-
-		println(s"Scheduling updates for NodesAlive on $localNode ...")
 		scheduleNodesAlive(nodesAliveFreq)
-		
-		println(s"Scheduling updates for NodesContent on $localNode...")
 		scheduleNodesContent(nodesContentFreq)
-		
-		println(s"Scheduling updates for versions being served locally on $localNode ...")
 		scheduleServingVersions(servingVersionsFreq)
 	}
 
 def downloadDatabaseVersion(database: Database, version: Long) = {
-    println(s"Downloading database $database version $version to $localNode ...")
-
     val remoteDir = database.versionedStore.versionPath(version)
     val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
@@ -150,10 +133,8 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
       val localDir = localDB.versionedStore.createVersion(version)
 
       // TODO: This "fails" silently if the number of max retries is reached.
-      println(s"Deleting incomplete shards for $localNode in $localDir ...")
       deleteIncompleteShards(localDir)
 
-      println(s"Copying shards from $remoteDir to $localDir ...")
       copyShards(remoteDir, localDir, 0) foreach { numRetries => 
         if (numRetries < maxDownloadRetries) {
           deleteIncompleteShards(localDir)
@@ -237,7 +218,7 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
 			.find { db => db.catalog.name == catalog && db.name == database }
 			.getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
 
-		val servedVersion = servingVersions getOrElse (
+    val servedVersion = servingVersions getOrElse (
 			blobDatabase,
 			throw new DatabaseNotServedException("Database $blobDatabase.name$ not currently being served.")
 		)
@@ -252,10 +233,10 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
 		)
 
 		val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
-
-		parMap(keysToNodes) map { case (node, ids) =>
-			val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
-			deserializeMapReduceResult[T](serializedResult)
+		
+    parMap(keysToNodes) map { case (node, ids) =>
+      val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
+      deserializeMapReduceResult[T](serializedResult)
 		} reduce { (t1, t2) => mapReduce.reduce(t1, t2) }
 	}
 

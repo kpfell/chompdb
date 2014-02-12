@@ -1,5 +1,6 @@
 package chompdb.server
 
+import java.util.Collections.synchronizedSortedMap
 import java.util.TreeMap
 
 case class NodeNotFoundException(smth: String) extends Exception
