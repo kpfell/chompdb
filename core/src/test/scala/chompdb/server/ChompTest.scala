@@ -9,6 +9,7 @@ import java.io.IOException
 import java.io.{ ObjectInputStream, ObjectOutputStream }
 import java.nio.ByteBuffer
 import java.util.concurrent.{ ScheduledExecutorService, TimeUnit }
+import java.util.TreeMap
 import scala.collection._
 import scala.collection.mutable.SynchronizedSet
 import scala.concurrent.duration._
@@ -155,6 +156,18 @@ class ChompTest extends WordSpec with ShouldMatchers {
       )
     }
 
+    "initialize the internal hash ring" in {
+      val tm = new TreeMap[Int, Node]
+
+      chomp.hashRing.nodeMap should be === tm
+      chomp.hashRing.initialize(chomp.nodes.keys.toSet)
+      
+      tm.put(Hashing.hash("Node1"), Node("Node1"))
+      tm.put(Hashing.hash("Node2"), Node("Node2"))
+
+      chomp.hashRing.nodeMap should be === tm
+    }
+
     "purge inconsistent shards within the Chomp's filesystem" in {
       val path = chomp.localDB(database1).versionedStore.versionPath(1L)
       val blobFilePath = path / "2.blob"
@@ -192,16 +205,29 @@ class ChompTest extends WordSpec with ShouldMatchers {
 
       chomp.downloadDatabaseVersion(database1, 2L)
 
-      database1Local.versionedStore.versionExists(2L) should be === true
-      (database1Local.versionedStore.versionPath(2L) / "0.blob").exists should be === true
-      (database1Local.versionedStore.versionPath(2L) / "0.index").exists should be === true
-      database1Local.versionedStore.shardMarker(2L, 0).exists should be === true
-      (database1Local.versionedStore.versionPath(2L) / "1.blob").exists should be === false
-      (database1Local.versionedStore.versionPath(2L) / "1.index").exists should be === false
-      database1Local.versionedStore.shardMarker(2L, 1).exists should be === false
+      database1Local.versionedStore.versionExists(2L) should be === true      
 
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 0)) should be === true
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, 1)) should be === false
+      val basenames = database1
+        .versionedStore
+        .versionPath(2L)
+        .listFiles
+        .filter { _.basename forall Character.isDigit }
+        .map { f => f.basename }
+        .toSet
+
+      basenames foreach { basename => 
+        if (chomp.hashRing.getNodeForShard(basename.toInt) == chomp.localNode) {
+          (database1Local.versionedStore.versionPath(2L) / (basename + ".blob")).exists should be === true
+          (database1Local.versionedStore.versionPath(2L) / (basename + ".index")).exists should be === true
+          database1Local.versionedStore.shardMarker(2L, basename.toInt).exists should be === true
+          chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, basename.toInt)) should be === true
+        } else {
+          (database1Local.versionedStore.versionPath(2L) / (basename + ".blob")).exists should be === false
+          (database1Local.versionedStore.versionPath(2L) / (basename + ".index")).exists should be === false
+          database1Local.versionedStore.shardMarker(2L, basename.toInt).exists should be === false
+          chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 2L, basename.toInt)) should be === false
+        }
+      }
     }
 
     "begin serving a given database version" in {
@@ -221,16 +247,36 @@ class ChompTest extends WordSpec with ShouldMatchers {
     }
 
     "update a database to the latest version" in {
+      val database1Local = chomp.localDB(database1)  
+
       chomp.servingVersions.getOrElse(database1, None) should be === Some(2L)
-      chomp.localDB(database1).versionedStore.versionExists(3L) should be === false
+      database1Local.versionedStore.versionExists(3L) should be === false
 
       chomp.updateDatabase(database1)
 
-      chomp.localDB(database1).versionedStore.versionExists(3L) should be === true
+      database1Local.versionedStore.versionExists(3L) should be === true
 
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 0)) should be === true
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 1)) should be === false
-      chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, 2)) should be === true
+      val basenames = database1
+        .versionedStore
+        .versionPath(3L)
+        .listFiles
+        .filter { _.basename forall Character.isDigit }
+        .map { f => f.basename }
+        .toSet
+
+      basenames foreach { basename => 
+        if (chomp.hashRing.getNodeForShard(basename.toInt) == chomp.localNode) {
+          (database1Local.versionedStore.versionPath(3L) / (basename + ".blob")).exists should be === true
+          (database1Local.versionedStore.versionPath(3L) / (basename + ".index")).exists should be === true
+          database1Local.versionedStore.shardMarker(3L, basename.toInt).exists should be === true
+          chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, basename.toInt)) should be === true
+        } else {
+          (database1Local.versionedStore.versionPath(3L) / (basename + ".blob")).exists should be === false
+          (database1Local.versionedStore.versionPath(3L) / (basename + ".index")).exists should be === false
+          database1Local.versionedStore.shardMarker(3L, basename.toInt).exists should be === false
+          chomp.availableShards.contains(DatabaseVersionShard(database1.catalog.name, database1.name, 3L, basename.toInt)) should be === false
+        }
+      }
     }
 
     "initialize numShardsPerVersion" in {

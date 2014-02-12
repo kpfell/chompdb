@@ -136,126 +136,94 @@ abstract class Chomp extends SlapChop {
 		scheduleServingVersions(servingVersionsFreq)
 	}
 
-	def downloadDatabaseVersion(database: Database, version: Long) = {
-		println(s"Downloading database $database version $version to $localNode ...")
+def downloadDatabaseVersion(database: Database, version: Long) = {
+    println(s"Downloading database $database version $version to $localNode ...")
 
-		val remoteDir = database.versionedStore.versionPath(version)
-		val remoteVersionMarker = database.versionedStore.versionMarker(version)
+    val remoteDir = database.versionedStore.versionPath(version)
+    val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
-		// TODO: This "fails" silently if the version does not exist.
-		if (remoteVersionMarker.exists) {
-			val rvmFullpath = remoteVersionMarker.fullpath
+    // TODO: This "fails" silently if the version marker does not exist
+    if (remoteVersionMarker.exists) {
+      val localDB = Chomp.this.localDB(database)
 
-			println(s"Remote version marker found by $localNode at $rvmFullpath")
+      // TODO: What does createVersion do if there already exists a version there?
+      val localDir = localDB.versionedStore.createVersion(version)
 
-			val rvmInput = new FileInputStream(remoteVersionMarker.fullpath)
-			val props = new Properties()
-			props.load(rvmInput)
-			rvmInput.close()
+      // TODO: This "fails" silently if the number of max retries is reached.
+      println(s"Deleting incomplete shards for $localNode in $localDir ...")
+      deleteIncompleteShards(localDir)
 
-			val shardIndex = 
-				if (props contains "highestShardIndex") props.getProperty("highestShardIndex").toInt + 1
-				else 0
+      println(s"Copying shards from $remoteDir to $localDir ...")
+      copyShards(remoteDir, localDir, 0) foreach { numRetries => 
+        if (numRetries < maxDownloadRetries) {
+          deleteIncompleteShards(localDir)
+          copyShards(remoteDir, localDir, numRetries)
+        }
+        else deleteIncompleteShards(localDir)
+      }
 
-			if (props contains "highestShardIndex") {				
-				props.setProperty("highestShardIndex", shardIndex.toString)
-				val rvmOutput = new FileOutputStream(remoteVersionMarker.fullpath)
-				props.store(rvmOutput, null)
-				rvmOutput.close()
+      copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
+    }
 
-				println(s"$localNode succeeding shardIndex $shardIndex for remote version $version ...")
-				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
-			} else {
-				props.put("highestShardIndex", shardIndex.toString)
-				val rvmOutput = new FileOutputStream(remoteVersionMarker.fullpath)
-				props.store(rvmOutput, null)
-				rvmOutput.close()
+    def deleteIncompleteShards(localVersionDir: FileSystem#Dir) {
+      localVersionDir
+        .listFiles
+        .filter { _.basename forall Character.isDigit }
+        .foreach { f =>
+          if (!(localVersionDir / (f.basename + ".shard")).exists) f.delete()
+        }
+    }
 
-				println(s"$localNode succeeding shardIndex $shardIndex for remote version $version ...")
-				Chomp.this.localDB(database).versionedStore.succeedShardIndex(version, shardIndex)
-			}
+    def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, 
+        numRetries: Int): Option[Int] = {
+      val remoteBasenamesToDownload = remoteVersionDir
+        .listFiles
+        .map { _.basename }
+        .filter { basename => (basename forall Character.isDigit) && 
+          (hashRing.getNodeForShard(basename.toInt) == localNode) 
+        }
+        .toSet
 
-			val localDB = Chomp.this.localDB(database)
-			println(s"Created local version of $database on $localNode")
-			// TODO: What does createVersion do if there already exists a version there?
-			println(s"Creating version $version locally on $localNode ...")
-			val localDir = localDB.versionedStore.createVersion(version)
+      for (basename <- remoteBasenamesToDownload) {
+        copyShardFiles(basename, remoteVersionDir, localVersionDir)
+      }
 
-			// TODO: This "fails" silently if the number of max retries is reached
-			println(s"Deleting incomplete shards for $localNode in $localDir ...")
-			deleteIncompleteShards(localDir)
-			
-			println(s"Copying shards from $remoteDir to $localDir with shardIndex $shardIndex ...")
-			copyShards(remoteDir, localDir, 0, shardIndex) foreach { numRetries =>
-				if (numRetries < maxDownloadRetries) {
-					deleteIncompleteShards(localDir)
-					copyShards(remoteDir, localDir, numRetries, shardIndex)
-				}
-				else deleteIncompleteShards(localDir)
-			}
+      def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, 
+          localVersionDir: FileSystem#Dir) {
+        val blobFile = remoteVersionDir / (basename + ".blob")
+        copy(blobFile, localVersionDir / blobFile.filename)
 
-			copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
-		}
+        val indexFile = remoteVersionDir / (basename + ".index")
+        copy(indexFile, localVersionDir / indexFile.filename)
 
-		def deleteIncompleteShards(localVersionDir: FileSystem#Dir) {
-			localVersionDir
-				.listFiles
-				.filter { _.basename forall Character.isDigit }
-				.foreach { f => 
-					if (!(localVersionDir / (f.basename + ".shard")).exists) f.delete()
-				}
-		}
+        if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists)
+          Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
 
-		def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int, shardIndex: Int): Option[Int] = {
-			val nodeCount = nodes.size
+        if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists)
+          availableShards = availableShards +
+            DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
+      }
 
-			val remoteBasenamesToDownload = remoteVersionDir
-				.listFiles
-				.map { _.basename }
-				.filter { basename => (basename forall Character.isDigit) && (basename.toInt % nodeCount == shardIndex) }
-				.filter { basename => !(localVersionDir / (basename + ".shard")).exists }
-				.toSet
+      val localBasenames = localVersionDir
+        .listFiles
+        .filter { _.extension == "shard" }
+        .map { _.basename }
+        .toSet
 
-			for (basename <- remoteBasenamesToDownload) {
-				copyShardFiles(basename, remoteVersionDir, localVersionDir)
-			}
+      if (remoteBasenamesToDownload == localBasenames) None
+      else Some(numRetries + 1)
+    }
 
-			def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
-				val blobFile = remoteVersionDir / (basename + ".blob")
-						copy(blobFile, localVersionDir / blobFile.filename)
+    def copyVersionFile(versionRemotePath: FileSystem#File, versionLocalDir: FileSystem#Dir) {
+      copy(versionRemotePath, versionLocalDir / versionRemotePath.filename)
+    }
 
-				val indexFile = remoteVersionDir / (basename + ".index")
-				copy(indexFile, localVersionDir / indexFile.filename)
-
-				if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists)
-					Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
-
-				if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists) {
-					availableShards = availableShards + 
-						DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
-				}
-			}
-			
-			val localBasenames = localVersionDir
-				.listFiles
-				.filter { _.extension == "shard" }
-				.map { _.basename }
-				.toSet
-
-			if (remoteBasenamesToDownload == localBasenames) None
-			else Some(numRetries + 1)
-		}
-
-		def copyVersionFile(versionRemotePath: FileSystem#File, versionLocalDir: FileSystem#Dir) {
-			copy(versionRemotePath, versionLocalDir / versionRemotePath.filename)
-		}
-
-		def copy(from: FileSystem#File, to: FileSystem#File) {
-			from.readAsReader { reader => 
-				to.write(reader, from.size)
-			}
-		}
-	}
+    def copy(from: FileSystem#File, to: FileSystem#File) {
+      from.readAsReader { reader => 
+        to.write(reader, from.size)
+      }
+    }
+  }
 
 	private def parMap[T, U](m: Map[T, U]) = {
 		val pc = m.par
