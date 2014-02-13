@@ -51,6 +51,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
         override val nodeAlive = mock(classOf[NodeAlive])
         override val replicationFactor = 1
         override val replicationBeforeVersionUpgrade = 1
+        override val maxVersions = 3
         override val maxDownloadRetries = 3
         override val executor = mock(classOf[ScheduledExecutorService])
         override val databaseUpdateFreq = 1.minute

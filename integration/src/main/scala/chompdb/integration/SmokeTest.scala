@@ -50,6 +50,7 @@ object SmokeTest extends App {
     }
     override val replicationFactor: Int = 2
     override val replicationBeforeVersionUpgrade: Int = 2
+    override val maxVersions: Int = 3
     override val maxDownloadRetries: Int = 10
     override val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(5)
     override val rootDir: FileSystem#Dir = {

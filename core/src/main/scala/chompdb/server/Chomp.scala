@@ -77,6 +77,7 @@ abstract class Chomp extends SlapChop {
 	val nodeAlive: NodeAlive
 	val replicationFactor: Int
 	val replicationBeforeVersionUpgrade: Int
+  val maxVersions: Int
 	val maxDownloadRetries: Int
 	val executor: ScheduledExecutorService
 	val databaseUpdateFreq: Duration
@@ -85,7 +86,7 @@ abstract class Chomp extends SlapChop {
 	val servingVersionsFreq: Duration
 	val rootDir: FileSystem#Dir
 
-	val hashRing = new HashRing
+	lazy val hashRing = new HashRing
 
 	@transient var availableShards = Set.empty[DatabaseVersionShard]
 
@@ -389,6 +390,19 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
 			if (!localDB(database).versionedStore.versionExists(version))
 				downloadDatabaseVersion(database, version)
 		}
+
+    val expiredVersions = Chomp.this
+      .localDB(database)
+      .versionedStore
+      .versions
+      .dropRight(maxVersions)
+
+    expiredVersions foreach { version => 
+      Chomp.this
+        .localDB(database)
+        .versionedStore
+        .deleteVersion(version)
+    }
 	}
 
 	def updateNodesAlive() {
