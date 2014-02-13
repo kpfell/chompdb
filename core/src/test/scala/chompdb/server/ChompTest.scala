@@ -58,6 +58,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
     when(nodeAlive.isAlive(Node("Node2"))).thenReturn(false)
     override val replicationFactor = 1
     override val replicationBeforeVersionUpgrade = 1
+    override val maxVersions = 3
     override val maxDownloadRetries = 3
     override val executor = mock(classOf[ScheduledExecutorService])
     override val databaseUpdateFreq = 1.minute
