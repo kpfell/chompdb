@@ -86,7 +86,7 @@ abstract class Chomp extends SlapChop {
 	val servingVersionsFreq: Duration
 	val rootDir: FileSystem#Dir
 
-	lazy val hashRing = new HashRing
+	lazy val hashRing = new HashRing(Chomp.this)
 
 	@transient var availableShards = Set.empty[DatabaseVersionShard]
 
@@ -162,7 +162,7 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
         .listFiles
         .map { _.basename }
         .filter { basename => (basename forall Character.isDigit) && 
-          (hashRing.getNodeForShard(basename.toInt) == localNode) 
+          (hashRing.getNodesForShard(basename.toInt) contains localNode) 
         }
         .toSet
 

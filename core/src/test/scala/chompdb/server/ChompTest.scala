@@ -217,7 +217,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
         .toSet
 
       basenames foreach { basename => 
-        if (chomp.hashRing.getNodeForShard(basename.toInt) == chomp.localNode) {
+        if (chomp.hashRing.getNodesForShard(basename.toInt) contains chomp.localNode) {
           (database1Local.versionedStore.versionPath(2L) / (basename + ".blob")).exists should be === true
           (database1Local.versionedStore.versionPath(2L) / (basename + ".index")).exists should be === true
           database1Local.versionedStore.shardMarker(2L, basename.toInt).exists should be === true
@@ -266,7 +266,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
         .toSet
 
       basenames foreach { basename => 
-        if (chomp.hashRing.getNodeForShard(basename.toInt) == chomp.localNode) {
+        if (chomp.hashRing.getNodesForShard(basename.toInt) contains chomp.localNode) {
           (database1Local.versionedStore.versionPath(3L) / (basename + ".blob")).exists should be === true
           (database1Local.versionedStore.versionPath(3L) / (basename + ".index")).exists should be === true
           database1Local.versionedStore.shardMarker(3L, basename.toInt).exists should be === true
