@@ -390,18 +390,9 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
         downloadDatabaseVersion(database, version)
     }
 
-    val expiredVersions = Chomp.this
-      .localDB(database)
+    localDB(database)
       .versionedStore
-      .versions
-      .dropRight(maxVersions)
-
-    expiredVersions foreach { version => 
-      Chomp.this
-        .localDB(database)
-        .versionedStore
-        .deleteVersion(version)
-    }
+      .cleanup(maxVersions)
   }
 
   def updateNodesAlive() {
