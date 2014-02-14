@@ -38,7 +38,7 @@ object SmokeTest extends App {
 
   val servers: Map[Node, DatabaseServer] = nodes map { case (node, endpoint) => node -> server(node.id.toInt, node) }
 
-  def server(index: Int, node: Node) = new DatabaseServer {
+  def server(index: Int, node: Node) = new DatabaseServer { chomp =>
     override val params = SmokeTest.params
 
     override val databases: Seq[Database] = SmokeTest.params.databases map (_._1)
@@ -59,21 +59,9 @@ object SmokeTest extends App {
       dir
     }
 
-    override val nodeProtocol: Map[Node, NodeProtocol] = nodes map { case (node, endpoint) => node -> new NodeProtocol {
-      override def availableShards(catalog: String, database: String): Set[VersionShard] = {
-        val available = servers(node).availableShards
-        available collect {
-          case a if (a.catalog == catalog && a.database == database) => (a.version, a.shard)
-        } toSet
-      }
-
-      override def mapReduce(catalog: String, database: String, version: Long, ids: Seq[Long], mapReduce: String): Array[Byte] = {
-        val server = servers(node)
-        val mapReduceF = server.deserializeMapReduce(mapReduce)
-        val result = server.mapReduce(catalog, database, ids, mapReduceF)
-        server.serializeMapReduceResult(result)
-      }
-    }} toMap;
+    override val nodeProtocol: Map[Node, NodeProtocol] = {
+      nodes map { case (node, endpoint) => node -> new Chomp.LocalNodeProtocol(node, chomp) } toMap
+    }
 
     override def toString = s"Server($index, $node)"
 
