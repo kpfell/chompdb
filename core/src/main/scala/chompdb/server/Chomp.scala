@@ -257,47 +257,30 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
     }
   }
 
-  def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, numShards: Int): Map[Node, Seq[Long]] = {
-    val keyToNodesServingShard = keys 
-      .map { key => 
-        val shard = DatabaseVersionShard(
-          blobDatabase.catalog.name, 
-          blobDatabase.name, 
-          version, 
-          (key % numShards).toInt
-        )
+  def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, 
+      numShards: Int): Map[Node, Seq[Long]] = keys
+    .map { key => 
+      val shard = DatabaseVersionShard(
+        blobDatabase.catalog.name, 
+        blobDatabase.name, 
+        version, 
+        (key % numShards).toInt
+      )
 
-        val nodesServingShard = nodesContent
-          .filter { _._2 contains shard }
-          .keys
+      val nodesServingShard = nodesContent
+        .filter { _._2 contains shard }
+        .keys
+        .toSet
 
-        (key, nodesServingShard)
-      }
+      val nodesAssignedShard = hashRing.getNodesForShard(shard.shard)
 
-    var nodesToKeys = Map.empty[Node, Seq[Long]]
+      val nodesAvailableWithShard = nodesAssignedShard
+        .filter { n => (nodesServingShard contains n) && nodesAlive.getOrElse(n, false) }
 
-    for (pair <- keyToNodesServingShard) {
-      val key = pair._1
-      var assignedNode: Option[Node] = None
-
-      breakable { for (node <- pair._2) {
-        if (!nodesToKeys.contains(node)) {
-          assignedNode = Some(node)
-          break
-        } 
-        else if (assignedNode == None) assignedNode = Some(node)
-        else if (nodesToKeys.getOrElse(node, Seq.empty).size < nodesToKeys.getOrElse(assignedNode.get, Seq.empty).size)
-          assignedNode = Some(node)
-      } }
-
-      if (nodesToKeys.contains(assignedNode.get)) {
-        val nodeKeys = nodesToKeys(assignedNode.get)
-        nodesToKeys = nodesToKeys + (assignedNode.get -> (nodeKeys :+ key))
-      } else nodesToKeys = nodesToKeys + (assignedNode.get -> Seq(key))
+      (nodesAvailableWithShard.head, key)
     }
-
-    nodesToKeys
-  }
+    .groupBy(_._1)
+    .map { case (node, seq) => (node, seq map { _._2 }) }
 
   def getNewVersionNumber(database: Database): Option[Long] = database
     .versionedStore
