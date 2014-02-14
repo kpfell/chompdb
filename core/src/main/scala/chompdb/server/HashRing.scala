@@ -14,27 +14,27 @@ class HashRing(chomp: Chomp) {
     nodeMap put (nodeHashValue, node)
   }
 
-  def getNodesForShard(shardId: Int): Set[Node] = {
+  def getNodesForShard(shardId: Int): List[Node] = {
     val shardHashValue = Hashing.hash(shardId.toString)
 
     nodeMap.size match {
       case 0 => throw new NodeNotFoundException("No nodes available on the hash ring.")
-      case 1 => Set(nodeMap.get(nodeMap.firstKey))
+      case 1 => List(nodeMap.get(nodeMap.firstKey))
       case _ => {
-        def assembleNodeSet(nodeSet: Set[Node], count: Int, baseHashValue: Int): Set[Node] = count match {
+        def assembleNodeList(nodeList: List[Node], count: Int, baseHashValue: Int): List[Node] = count match {
           case c if c < 0 => {
             throw new InvalidReplicationFactorException(s"Invalid replicationFactor provided: $c")
           }
-          case 0 => nodeSet
+          case 0 => nodeList
           case c if c > 0 => {
             val nearestNodeHashValue = Option(nodeMap.ceilingKey(baseHashValue))
               .getOrElse(nodeMap.firstKey)
 
-            assembleNodeSet(nodeSet + nodeMap.get(nearestNodeHashValue), c - 1, baseHashValue + 1)
+            assembleNodeList(nodeList :+ nodeMap.get(nearestNodeHashValue), c - 1, baseHashValue + 1)
           }
         }
 
-        assembleNodeSet(Set.empty[Node], chomp.replicationFactor, shardHashValue)
+        assembleNodeList(List.empty[Node], chomp.replicationFactor, shardHashValue)
       }
     } 
   }
