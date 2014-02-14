@@ -238,7 +238,7 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
     
     // unfortunately, scala's parallel collections don't catch Errors, so let's do
     // ourselves a favor and wrap them so they bubble back up to the client 
-    def wrapThrowables[T](f: => T) = {
+    def wrapErrors[T](f: => T) = {
       try f
       catch { case e: Error => 
         throw new RuntimeException(e)
@@ -246,12 +246,12 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
     }
     
     parMap(keysToNodes) map { case (node, ids) =>
-      wrapThrowables{
+      wrapErrors{
         val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
         deserializeMapReduceResult[T](serializedResult)
       }
     } reduce { (t1, t2) => 
-      wrapThrowables {
+      wrapErrors {
         mapReduce.reduce(t1, t2)
       }
     }
