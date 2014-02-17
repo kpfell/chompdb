@@ -9,7 +9,7 @@ case class NodeNotFoundException(smth: String) extends Exception
 class HashRing(chomp: Chomp) {
   val nodeMap = new TreeMap[Int, Node]
 
-  def addNode(node: Node) = {
+  def addNode(node: Node) {
     val nodeHashValue = Hashing.hash(node.id)
     nodeMap put (nodeHashValue, node)
   }

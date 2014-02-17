@@ -16,8 +16,22 @@ case class Result(
   ids: Set[Long]
 )
 
-trait DatabaseClient {
+object DatabaseClient {
+  object CollectVersions extends MapReduce[ByteBuffer, Result] {
+    override def map(buf: ByteBuffer) = {
+      val data = Blob.unapply(buf.array)
+      Result(Set(data.version), Set(data.writer))
+    }
 
+    override def reduce(r1: Result, r2: Result) = {
+      Result(r1.versions ++ r2.versions, r1.ids ++ r2.ids)
+    }
+  }
+}
+
+trait DatabaseClient {
+  import DatabaseClient._
+  
   val delayBetweenQueries: Duration
 
   val blocksPerQueryRange: (Int, Int)
@@ -36,16 +50,6 @@ trait DatabaseClient {
 
   def randomDelay = Duration(randomLong(0, delayBetweenQueries._1), delayBetweenQueries._2)
 
-  val mapReduce = new MapReduce[ByteBuffer, Result] {
-    override def map(buf: ByteBuffer) = {
-      val data = Blob.unapply(buf.array)
-      Result(Set(data.version), Set(data.writer))
-    }
-
-    override def reduce(r1: Result, r2: Result) = {
-      Result(r1.versions ++ r2.versions, r1.ids ++ r2.ids)
-    }
-  }
 
   def run() {
 
@@ -60,8 +64,8 @@ trait DatabaseClient {
 	            val n = randomInt(blocksPerQueryRange._1, blocksPerQueryRange._2)
 	            (1 to n) map { _ => randomLong(0, dbParams.nElements) }
 	          }
-	          val result = randomServer.mapReduce(db.catalog.name, db.name, keys, mapReduce)
-	          println(s"mapReduce result: $result")
+	          val result = randomServer.mapReduce(db.catalog.name, db.name, keys, CollectVersions)
+	          println(s"Client $i mapReduce result: $result")
           } catch { case e: Throwable =>
             e.printStackTrace()
           }

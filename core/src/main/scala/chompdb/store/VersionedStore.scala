@@ -43,6 +43,13 @@ trait VersionedStore {
     versionMarker(version).delete()
   }
 
+  def deleteShard(version: Long, shard: Int) {
+    val vp = versionPath(version)
+    (vp /+ (shard + ".blob")).delete()
+    (vp /+ (shard + ".index")).delete()
+    (vp /+ (shard + ".shard")).delete()
+  }
+
   def numShardsForVersion(version: Long): Int = {
     val marker = versionMarker(version)
 
