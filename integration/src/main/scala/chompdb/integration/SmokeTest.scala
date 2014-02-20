@@ -36,9 +36,13 @@ object SmokeTest extends App {
     Node(n.toString) -> Endpoint(n.toString)
   } toMap;
 
+  lazy val nodeProtocols = servers
+    .map { case (node, server) => node -> new Chomp.LocalNodeProtocol(node, server) }
+    .toMap
+
   val servers: Map[Node, DatabaseServer] = nodes map { case (node, endpoint) => node -> server(node.id.toInt, node) }
 
-  def server(index: Int, node: Node) = new DatabaseServer { chomp =>
+  def server(index: Int, node: Node) = new DatabaseServer {
     override val params = SmokeTest.params
 
     override val databases: Seq[Database] = SmokeTest.params.databases map (_._1)
@@ -59,9 +63,7 @@ object SmokeTest extends App {
       dir
     }
 
-    override val nodeProtocol: Map[Node, NodeProtocol] = {
-      nodes map { case (node, endpoint) => node -> new Chomp.LocalNodeProtocol(node, chomp) } toMap
-    }
+    override def nodeProtocol = nodeProtocols
 
     override def toString = s"Server($index, $node)"
 

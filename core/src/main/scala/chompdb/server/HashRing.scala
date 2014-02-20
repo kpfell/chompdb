@@ -30,7 +30,7 @@ class HashRing(chomp: Chomp) {
             val nearestNodeHashValue = Option(nodeMap.ceilingKey(baseHashValue))
               .getOrElse(nodeMap.firstKey)
 
-            assembleNodeSet(nodeSet + nodeMap.get(nearestNodeHashValue), c - 1, baseHashValue + 1)
+            assembleNodeSet(nodeSet + nodeMap.get(nearestNodeHashValue), c - 1, nearestNodeHashValue + 1)
           }
         }
 

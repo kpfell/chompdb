@@ -182,9 +182,10 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
         if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists)
           Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
 
-        if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists)
-          availableShards = availableShards +
-            DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
+        if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists) {
+          val shard = DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
+          addAvailableShard(shard)
+        }
       }
 
       val localBasenames = localVersionDir
@@ -240,7 +241,7 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
     // ourselves a favor and wrap them so they bubble back up to the client 
     def wrapErrors[T](f: => T) = {
       try f
-      catch { case e: Error => 
+      catch { case e: Exception => 
         throw new RuntimeException(e)
       }
     }
@@ -307,6 +308,10 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
       .toSet
       .flatten
       .flatten
+  }
+
+  def addAvailableShard(shard: DatabaseVersionShard) {
+    availableShards = availableShards + shard
   }
 
   def purgeInconsistentShards() {
@@ -407,7 +412,7 @@ def downloadDatabaseVersion(database: Database, version: Long) = {
       .map { n => n -> databases
         .map { db => nodeProtocol(n)
           .availableShards(db.catalog.name, db.name)
-          .map { vs => DatabaseVersionShard(db.catalog.name, db.name, vs._1, vs._2) } 
+          .map { vs => DatabaseVersionShard(db.catalog.name, db.name, vs._1, vs._2) }
         }
         .flatten
         .toSet
