@@ -284,30 +284,31 @@ abstract class Chomp extends SlapChop {
     }
   }
 
-  def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, 
-      numShards: Int): Map[Node, Seq[Long]] = keys
-    .map { key => 
-      val shard = DatabaseVersionShard(
-        blobDatabase.catalog.name, 
-        blobDatabase.name, 
-        version, 
-        (key % numShards).toInt
-      )
+  def partitionKeys(keys: Seq[Long], blobDatabase: Database, version: Long, numShards: Int): Map[Node, Seq[Long]] = {
+    keys
+      .map { key => 
+        val shard = DatabaseVersionShard(
+          blobDatabase.catalog.name, 
+          blobDatabase.name, 
+          version, 
+          (key % numShards).toInt
+        )
 
-      val nodesServingShard = nodesContent
-        .filter { _._2 contains shard }
-        .keys
-        .toSet
+        val nodesServingShard = nodesContent
+          .filter { _._2 contains shard }
+          .keys
+          .toSet
 
-      val nodesAssignedShard = hashRing.getNodesForShard(shard.shard)
+        val nodesAssignedShard = hashRing.getNodesForShard(shard.shard)
 
-      val nodesAvailableWithShard = nodesAssignedShard
-        .filter { n => (nodesServingShard contains n) && nodesAlive.getOrElse(n, false) }
+        val nodesAvailableWithShard = nodesAssignedShard
+          .filter { n => (nodesServingShard contains n) && nodesAlive.getOrElse(n, false) }
 
-      (nodesAvailableWithShard.head, key)
-    }
-    .groupBy(_._1)
-    .map { case (node, seq) => (node, seq map { _._2 }) }
+        (nodesAvailableWithShard.head, key)
+      }
+      .groupBy(_._1)
+      .map { case (node, seq) => (node, seq map { _._2 }) }
+  }
 
   def getNewVersionNumber(database: Database): Option[Long] = database
     .versionedStore
