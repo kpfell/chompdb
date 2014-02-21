@@ -34,11 +34,11 @@ object Chomp {
 
       val blobDatabase = chomp.databases
         .find { db => db.catalog.name == catalog && db.name == database }
-        .getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
+        .getOrElse { throw new DatabaseNotFoundException("Database $database not found.") }
 
       val numShards = chomp.numShardsPerVersion getOrElse (
         (blobDatabase, version),
-        throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
+        throw new ShardsNotFoundException("Shards for database $blobDatabase.name version $version not found.")
       )
 
       val result = parSeq(ids) map { id => 
@@ -219,20 +219,20 @@ abstract class Chomp extends SlapChop {
   override def mapReduce[T: TypeTag](catalog: String, database: String, keys: Seq[Long], mapReduce: MapReduce[ByteBuffer, T]) = {
     val blobDatabase = databases
       .find { db => db.catalog.name == catalog && db.name == database }
-      .getOrElse { throw new DatabaseNotFoundException("Database $database$ not found.") }
+      .getOrElse { throw new DatabaseNotFoundException("Database $database not found.") }
 
     val servedVersion = servingVersions getOrElse (
       blobDatabase,
-      throw new DatabaseNotServedException("Database $blobDatabase.name$ not currently being served.")
+      throw new DatabaseNotServedException("Database $blobDatabase.name not currently being served.")
     )
 
     val version = servedVersion getOrElse (
-      throw new VersionNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
+      throw new VersionNotFoundException("Shards for database $blobDatabase.name version $version not found.")
     )
 
     val numShards = numShardsPerVersion getOrElse (
       (blobDatabase, version),
-      throw new ShardsNotFoundException("Shards for database $blobDatabase.name$ version $version$ not found.")
+      throw new ShardsNotFoundException("Shards for database $blobDatabase.name version $version not found.")
     )
 
     val keysToNodes = partitionKeys(keys, blobDatabase, version, numShards)
