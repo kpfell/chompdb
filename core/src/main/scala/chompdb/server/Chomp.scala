@@ -342,14 +342,22 @@ abstract class Chomp extends SlapChop {
         !(db.versionedStore.versionPath(v) / (f.basename + ".shard")).exists
     }
 
-    databases
-      .map { db => localDB(db).versionedStore.versions
-        .map { v => localDB(db).versionedStore.versionPath(v)
-          .listFiles
-          .filter { f => isInconsistentShard(localDB(db), v, f) }
-          .foreach { f => f.delete() }
-        }
-      }
+    // databases
+    //   .map { db => localDB(db).versionedStore.versions
+    //     .map { v => localDB(db).versionedStore.versionPath(v)
+    //       .listFiles
+    //       .filter { f => isInconsistentShard(localDB(db), v, f) }
+    //       .foreach { f => f.delete() }
+    //     }
+    //   }
+
+    for {
+      db <- databases;
+      val local = localDB(db)
+      val vs = local.versionedStore
+      v <- vs.versions
+      f <- vs.versionPath(v).listFiles if isInconsistentShard(local, v, f)
+    } f.delete()
   }
 
   def initializeNumShardsPerVersion() {
