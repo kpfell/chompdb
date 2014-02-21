@@ -342,15 +342,6 @@ abstract class Chomp extends SlapChop {
         !(db.versionedStore.versionPath(v) / (f.basename + ".shard")).exists
     }
 
-    // databases
-    //   .map { db => localDB(db).versionedStore.versions
-    //     .map { v => localDB(db).versionedStore.versionPath(v)
-    //       .listFiles
-    //       .filter { f => isInconsistentShard(localDB(db), v, f) }
-    //       .foreach { f => f.delete() }
-    //     }
-    //   }
-
     for {
       db <- databases;
       val local = localDB(db)
@@ -382,7 +373,7 @@ abstract class Chomp extends SlapChop {
       }
     }
 
-    executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
+    executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
   def scheduleNodesAlive(duration: Duration) = {
@@ -402,7 +393,7 @@ abstract class Chomp extends SlapChop {
       }
     }
 
-    executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
+    executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
   def scheduleServingVersions(duration: Duration) = {
@@ -412,7 +403,7 @@ abstract class Chomp extends SlapChop {
       }
     }
 
-    executor.scheduleAtFixedRate(task, 0L, duration.toMillis, MILLISECONDS)
+    executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
   def serveVersion(database: Database, version: Option[Long]) = {
