@@ -4,9 +4,8 @@ import java.util.Properties
 import scala.collection.JavaConverters._
 
 object DatabaseVersion{
-  def fromProperties(db: DatabaseInfo, version: Long, props: Properties) = {
+  def fromProperties(version: Long, props: Properties) = {
     DatabaseVersion(
-      db,
       version,
       props.getProperty("sharding_factor").toInt,
       props.getProperty("splits").toInt,
@@ -16,7 +15,6 @@ object DatabaseVersion{
 }
 
 case class DatabaseVersion(
-  db: DatabaseInfo,
   version: Long,
   shardingFactor: Int,
   splits: Int,

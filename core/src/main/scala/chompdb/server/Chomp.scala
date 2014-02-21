@@ -186,7 +186,9 @@ abstract class Chomp extends SlapChop {
         .listFiles
         .filter { _.basename forall Character.isDigit }
         .foreach { f =>
-          if (!(localVersionDir / (f.basename + ".shard")).exists) f.delete()
+          if (!(localVersionDir / (f.basename + ".shard")).exists) {
+            f.delete()
+          }
         }
     }
 
@@ -412,8 +414,9 @@ abstract class Chomp extends SlapChop {
 
   def updateDatabase(database: Database) {
     getNewerVersionNumber(database) foreach { version => 
-      if (!localDB(database).versionedStore.versionExists(version))
+      if (!localDB(database).versionedStore.versionExists(version)) {
         downloadDatabaseVersion(database, version)
+      }
     }
 
     localDB(database)
