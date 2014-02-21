@@ -72,39 +72,70 @@ object Chomp {
 }
 
 abstract class Chomp extends SlapChop {
+  // Databases on secondary filesystem
   val databases: Seq[Database]
+  // Node on which this Chomp instance resides
   val localNode: Node
+  // Map of Nodes in the network to their corresponding Endpoints
   val nodes: Map[Node, Endpoint]
+  // NodeAlive implementation for verifying availability of Nodes
   val nodeAlive: NodeAlive
+  // Number of times a shard should be replicated across the network 
   val replicationFactor: Int
+  // Number of times a shard must be replicated across the network before
+  // this Chomp initiates queries against its version
   val replicationBeforeVersionUpgrade: Int
+  // Maximum number of versions that will exist simultaneously
   val maxVersions: Int
+  // Maximum number of times the Chomp will attempt to download
+  // a DatabaseVersionShard
   val maxDownloadRetries: Int
+  // ScheduledExecutorService for scheduling recurring database updates,
+  // network status updates, etc.
   val executor: ScheduledExecutorService
+  // Frequency with which the Chomp should check for a new database version
   val databaseUpdateFreq: Duration
+  // Frequency with which the Chomp should update the availability status of 
+  // Nodes in the network
   val nodesAliveFreq: Duration
+  // Frequency with which the Chomp should update its mappings of Nodes to
+  // shards being served
   val nodesContentFreq: Duration
+  // Frequency with which the Chomp should update its mappings of Databases
+  // to versions that queries should be initiated against
   val servingVersionsFreq: Duration
+  // Root directory for this Chomp
   val rootDir: FileSystem#Dir
 
+  // HashRing instance for consistent hashing
   lazy val hashRing = new HashRing(Chomp.this)
 
+  // Set of shards available locally on current Node
   @transient var availableShards = Set.empty[DatabaseVersionShard]
 
+  // Map of Databases to versions that queries should be initiated against
   @transient var servingVersions = Map.empty[Database, Option[Long]]
+  // Map of Databases and versions to the number of shards in that version
   @transient var numShardsPerVersion = Map.empty[(Database, Long), Int]
   
+  // Map of Nodes to whether they are available
   @transient var nodesAlive = Map.empty[Node, Boolean]
+  // Map of Nodes to the set of shards they each have locally
   @transient var nodesContent = Map.empty[Node, Set[DatabaseVersionShard]]
 
+  // Map of Nodes to NodeProtocols for interacting with them
   def nodeProtocol: Map[Node, NodeProtocol]
 
+  // Method for serializing MapReduce queries
   def serializeMapReduce[T, U](mapReduce: MapReduce[T, U]): String
 
+  // Method for deserializing MapReduce queries
   def deserializeMapReduce(mapReduce: String): MapReduce[ByteBuffer, _]
 
+  // Method for serializing MapReduce results
   def serializeMapReduceResult(result: Any): Array[Byte]
 
+  // Method for deserializing MapReduce results
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
   def run() {
