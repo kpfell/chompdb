@@ -22,11 +22,12 @@ case class VersionNotFoundException(msg: String) extends Exception
 
 object Chomp {
   class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
-    override def availableShards(catalog: String, database: String): Set[VersionShard] =
+    override def availableShards(catalog: String, database: String): Set[VersionShard] = {
       chomp
         .availableShards
         .filter(_.database == database)
         .map { dbvs => (dbvs.version, dbvs.shard) }
+    }
 
     override def mapReduce(catalog: String, database: String, version: Long, 
         ids: Seq[Long], mapReduce: String): Array[Byte] = {
@@ -189,8 +190,7 @@ abstract class Chomp extends SlapChop {
         }
     }
 
-    def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, 
-        numRetries: Int): Option[Int] = {
+    def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
       val remoteBasenamesToDownload = remoteVersionDir
         .listFiles
         .map { _.basename }
@@ -203,8 +203,7 @@ abstract class Chomp extends SlapChop {
         copyShardFiles(basename, remoteVersionDir, localVersionDir)
       }
 
-      def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, 
-          localVersionDir: FileSystem#Dir) {
+      def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
         val blobFile = remoteVersionDir / (basename + ".blob")
         copy(blobFile, localVersionDir / blobFile.filename)
 
@@ -273,7 +272,7 @@ abstract class Chomp extends SlapChop {
     }
     
     parMap(keysToNodes) map { case (node, ids) =>
-      wrapErrors{
+      wrapErrors {
         val serializedResult = nodeProtocol(node).mapReduce(catalog, database, version, ids, serializeMapReduce(mapReduce))
         deserializeMapReduceResult[T](serializedResult)
       }
@@ -307,19 +306,21 @@ abstract class Chomp extends SlapChop {
       .map { case (node, seq) => (node, seq map { _._2 }) }
   }
 
-  def getNewVersionNumber(database: Database): Option[Long] = database
-    .versionedStore
-    .mostRecentVersion
-    .flatMap { latestRemoteVersion => 
-      localDB(database).versionedStore.mostRecentVersion match {
-        case Some(latestLocalVersion) =>
-          if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
-          else None
-        case None => Some(latestRemoteVersion)
+  def getNewVersionNumber(database: Database): Option[Long] = {
+    database
+      .versionedStore
+      .mostRecentVersion
+      .flatMap { latestRemoteVersion => 
+        localDB(database).versionedStore.mostRecentVersion match {
+          case Some(latestLocalVersion) =>
+            if (latestRemoteVersion > latestLocalVersion) Some(latestRemoteVersion)
+            else None
+          case None => Some(latestRemoteVersion)
+        }
       }
-    }
+  }
 
-  def localDB(database: Database): Database = new Database(
+  def localDB(database: Database): Database = new Database (
     new Catalog(database.catalog.name, rootDir),
     database.name
   )
