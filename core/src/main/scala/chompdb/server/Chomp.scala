@@ -3,6 +3,7 @@ package chompdb.server
 import chompdb._
 import chompdb.store.{ FileStore, ShardedWriter, VersionedStore }
 import f1lesystem.FileSystem
+import f1lesystem.FileSystem.copy
 import java.io._
 import java.nio.ByteBuffer
 import java.util.concurrent.ScheduledExecutorService
@@ -231,12 +232,6 @@ abstract class Chomp extends SlapChop {
 
     def copyVersionFile(versionRemotePath: FileSystem#File, versionLocalDir: FileSystem#Dir) {
       copy(versionRemotePath, versionLocalDir / versionRemotePath.filename)
-    }
-
-    def copy(from: FileSystem#File, to: FileSystem#File) {
-      from.readAsReader { reader => 
-        to.write(reader, from.size)
-      }
     }
   }
 
