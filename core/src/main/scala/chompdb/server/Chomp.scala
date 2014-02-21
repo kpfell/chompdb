@@ -14,10 +14,10 @@ import scala.util.control.Breaks._
 import scala.concurrent.duration._
 import scala.reflect.runtime.universe._
 
-case class DatabaseNotFoundException(smth: String) extends Exception
-case class DatabaseNotServedException(smth: String) extends Exception
-case class ShardsNotFoundException(smth: String) extends Exception
-case class VersionNotFoundException(smth: String) extends Exception
+case class DatabaseNotFoundException(msg: String) extends Exception
+case class DatabaseNotServedException(msg: String) extends Exception
+case class ShardsNotFoundException(msg: String) extends Exception
+case class VersionNotFoundException(msg: String) extends Exception
 
 object Chomp {
   class LocalNodeProtocol(node: Node, chomp: Chomp) extends NodeProtocol {
@@ -123,7 +123,7 @@ abstract class Chomp extends SlapChop {
     scheduleServingVersions(servingVersionsFreq)
   }
 
-def downloadDatabaseVersion(database: Database, version: Long) = {
+  def downloadDatabaseVersion(database: Database, version: Long) = {
     val remoteDir = database.versionedStore.versionPath(version)
     val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
