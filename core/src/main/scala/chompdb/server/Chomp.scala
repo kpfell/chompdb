@@ -324,15 +324,12 @@ abstract class Chomp extends SlapChop {
     new Catalog(database.catalog.name, rootDir),
     database.name
   )
-  
+
   def initializeAvailableShards() {
-    availableShards = databases
-      .map { db => localDB(db).versionedStore.versions 
-        .map { v => localDB(db).shardsOfVersion(v) } 
-      }
-      .toSet
-      .flatten
-      .flatten
+    availableShards = databases flatMap { db => 
+      val local = localDB(db)
+      local.versionedStore.versions flatMap { v => local.shardsOfVersion(v) }
+    } toSet
   }
 
   def addAvailableShard(shard: DatabaseVersionShard) {
