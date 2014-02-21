@@ -25,13 +25,12 @@ object Chomp {
     override def availableShards(catalog: String, database: String): Set[VersionShard] = {
       chomp
         .availableShards
-        .filter(_.database == database)
+        .filter { _.database == database }
         .map { dbvs => (dbvs.version, dbvs.shard) }
     }
 
     override def mapReduce(catalog: String, database: String, version: Long, 
         ids: Seq[Long], mapReduce: String): Array[Byte] = {
-      
       val mr = chomp.deserializeMapReduce(mapReduce).asInstanceOf[MapReduce[ByteBuffer, Any]]
 
       val blobDatabase = chomp.databases
@@ -156,7 +155,7 @@ abstract class Chomp extends SlapChop {
     scheduleServingVersions(servingVersionsFreq)
   }
 
-  def downloadDatabaseVersion(database: Database, version: Long) = {
+  def downloadDatabaseVersion(database: Database, version: Long) {
     val remoteDir = database.versionedStore.versionPath(version)
     val remoteVersionMarker = database.versionedStore.versionMarker(version)
 
@@ -212,8 +211,9 @@ abstract class Chomp extends SlapChop {
         val indexFile = remoteVersionDir / (basename + ".index")
         copy(indexFile, localVersionDir / indexFile.filename)
 
-        if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists)
+        if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists) {
           Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
+        }
 
         if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists) {
           val shard = DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
@@ -368,7 +368,7 @@ abstract class Chomp extends SlapChop {
       .toMap
   }
 
-  def scheduleDatabaseUpdate(duration: Duration, database: Database) = {
+  def scheduleDatabaseUpdate(duration: Duration, database: Database) {
     val task: Runnable = new Runnable() {
       def run() {
         updateDatabase(database)
@@ -378,7 +378,7 @@ abstract class Chomp extends SlapChop {
     executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
-  def scheduleNodesAlive(duration: Duration) = {
+  def scheduleNodesAlive(duration: Duration) {
     val task: Runnable = new Runnable() {
       def run() {
         updateNodesAlive()
@@ -388,7 +388,7 @@ abstract class Chomp extends SlapChop {
     executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
-  def scheduleNodesContent(duration: Duration) = {
+  def scheduleNodesContent(duration: Duration) {
     val task: Runnable = new Runnable() {
       def run() {
         updateNodesContent()
@@ -398,7 +398,7 @@ abstract class Chomp extends SlapChop {
     executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
-  def scheduleServingVersions(duration: Duration) = {
+  def scheduleServingVersions(duration: Duration) {
     val task: Runnable = new Runnable() {
       def run() {
         updateServingVersions()
@@ -408,7 +408,7 @@ abstract class Chomp extends SlapChop {
     executor.scheduleWithFixedDelay(task, 0L, duration.toMillis, MILLISECONDS)
   }
 
-  def serveVersion(database: Database, version: Option[Long]) = {
+  def serveVersion(database: Database, version: Option[Long]) {
     servingVersions = servingVersions + (database -> version)
   }
 
