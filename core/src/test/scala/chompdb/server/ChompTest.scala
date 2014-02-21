@@ -244,7 +244,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
       createEmptyShard(database1.versionedStore, 3L)
       database1.versionedStore.succeedVersion(3L, 3)
 
-      chomp.getNewVersionNumber(database1) should be === Some(3L)
+      chomp.getNewerVersionNumber(database1) should be === Some(3L)
     }
 
     "update a database to the latest version" in {

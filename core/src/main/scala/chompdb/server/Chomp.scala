@@ -306,7 +306,7 @@ abstract class Chomp extends SlapChop {
       .map { case (node, seq) => (node, seq map { _._2 }) }
   }
 
-  def getNewVersionNumber(database: Database): Option[Long] = {
+  def getNewerVersionNumber(database: Database): Option[Long] = {
     database
       .versionedStore
       .mostRecentVersion
@@ -411,7 +411,7 @@ abstract class Chomp extends SlapChop {
   }
 
   def updateDatabase(database: Database) {
-    getNewVersionNumber(database) foreach { version => 
+    getNewerVersionNumber(database) foreach { version => 
       if (!localDB(database).versionedStore.versionExists(version))
         downloadDatabaseVersion(database, version)
     }
