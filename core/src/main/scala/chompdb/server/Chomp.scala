@@ -140,7 +140,7 @@ abstract class Chomp extends SlapChop {
   def deserializeMapReduceResult[T: TypeTag](result: Array[Byte]): T
 
   def run() {
-    hashRing.initialize(nodes.keys.toSet)
+    hashRing.initialize(nodes keySet)
 
     for (database <- databases) {
       scheduleDatabaseUpdate(databaseUpdateFreq, database)
@@ -294,10 +294,7 @@ abstract class Chomp extends SlapChop {
           (key % numShards).toInt
         )
 
-        val nodesServingShard = nodesContent
-          .filter { _._2 contains shard }
-          .keys
-          .toSet
+        val nodesServingShard = nodesContent filter { _._2 contains shard } keySet
 
         val nodesAssignedShard = hashRing.getNodesForShard(shard.shard)
 

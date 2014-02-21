@@ -2,6 +2,7 @@ package chompdb.server
 
 import java.util.Collections.synchronizedSortedMap
 import java.util.TreeMap
+import scala.collection._
 
 case class InvalidReplicationFactorException(smth: String) extends Exception
 case class NodeNotFoundException(smth: String) extends Exception
