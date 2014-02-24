@@ -340,18 +340,10 @@ abstract class Chomp extends SlapChop {
   }
 
   def purgeInconsistentShards() {
-    def isInconsistentShard(db: Database, v: Long, f: FileSystem#File): Boolean = {
-      (f.extension == "blob" || f.extension == "index") && 
-        !(db.versionedStore.versionPath(v) / (f.basename + ".shard")).exists
+    for (db <- databases) {
+      val vs = localDB(db).versionedStore
+      vs.purgeInconsistentShards()
     }
-
-    for {
-      db <- databases;
-      val local = localDB(db)
-      val vs = local.versionedStore
-      v <- vs.versions
-      f <- vs.versionPath(v).listFiles if isInconsistentShard(local, v, f)
-    } f.delete()
   }
 
   def initializeNumShardsPerVersion() {

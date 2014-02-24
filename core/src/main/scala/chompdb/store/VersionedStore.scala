@@ -99,6 +99,18 @@ trait VersionedStore {
     }
   }
 
+  def purgeInconsistentShards() {
+    def isInconsistentShard(v: Long, f: FileSystem#File): Boolean = {
+      (f.extension == "blob" || f.extension == "index") &&
+        !(versionPath(v) / (f.basename + ".shard")).exists
+    }
+
+    for {
+      v <- versions
+      f <- versionPath(v).listFiles if isInconsistentShard(v, f)
+    } f.delete()
+  }
+
   /* Sorted from most recent to oldest */
   def versions = {
     if (!root.exists) {
