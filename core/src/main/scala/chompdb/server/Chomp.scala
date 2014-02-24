@@ -167,28 +167,17 @@ abstract class Chomp extends SlapChop {
       val localDir = localDB.versionedStore.createVersion(version)
 
       // TODO: This "fails" silently if the number of max retries is reached.
-      deleteIncompleteShards(localDir)
+      localDB.versionedStore.deleteIncompleteShards(version)
 
       copyShards(remoteDir, localDir, 0) foreach { numRetries => 
         if (numRetries < maxDownloadRetries) {
-          deleteIncompleteShards(localDir)
+          localDB.versionedStore.deleteIncompleteShards(version)
           copyShards(remoteDir, localDir, numRetries)
         }
-        else deleteIncompleteShards(localDir)
+        else localDB.versionedStore.deleteIncompleteShards(version)
       }
 
       copyVersionFile(database.versionedStore.versionMarker(version), localDB.versionedStore.root)
-    }
-
-    def deleteIncompleteShards(localVersionDir: FileSystem#Dir) {
-      localVersionDir
-        .listFiles
-        .filter { _.basename forall Character.isDigit }
-        .foreach { f =>
-          if (!(localVersionDir / (f.basename + ".shard")).exists) {
-            f.delete()
-          }
-        }
     }
 
     def copyShards(remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir, numRetries: Int): Option[Int] = {
@@ -340,10 +329,11 @@ abstract class Chomp extends SlapChop {
   }
 
   def purgeInconsistentShards() {
-    for (db <- databases) {
+    for {
+      db <- databases
       val vs = localDB(db).versionedStore
-      vs.purgeInconsistentShards()
-    }
+      v <- vs.versions
+    } vs.deleteIncompleteShards(v)
   }
 
   def initializeNumShardsPerVersion() {

@@ -99,16 +99,20 @@ trait VersionedStore {
     }
   }
 
-  def purgeInconsistentShards() {
-    def isInconsistentShard(v: Long, f: FileSystem#File): Boolean = {
-      (f.extension == "blob" || f.extension == "index") &&
-        !(versionPath(v) / (f.basename + ".shard")).exists
-    }
+  def isInconsistentShard(v: Long, f: FileSystem#File): Boolean = {
+    (f.extension == "blob" || f.extension == "index") &&
+      !(versionPath(v) / (f.basename + ".shard")).exists
+  } 
 
-    for {
-      v <- versions
-      f <- versionPath(v).listFiles if isInconsistentShard(v, f)
-    } f.delete()
+  def deleteIncompleteShards(version: Long) {
+    versionPath(version)
+      .listFiles
+      .filter { _.basename forall Character.isDigit }
+      .foreach { f => 
+        if (isInconsistentShard(version, f)) {
+          f.delete()
+        }
+      }
   }
 
   /* Sorted from most recent to oldest */
