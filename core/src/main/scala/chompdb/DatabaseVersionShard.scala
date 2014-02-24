@@ -1,5 +1,6 @@
 package chompdb
 
+import chompdb.store.VersionedStore
 import f1lesystem.FileSystem
 
 case class DatabaseVersionShard(
@@ -8,9 +9,9 @@ case class DatabaseVersionShard(
   version: Long,
   shard: Int 
 ) {
-  def blobFile(rootDir: FileSystem#Dir) = rootDir /+ catalog /+ database /+ version.toString / (shard + ".blob")
+  def blobFile(versionedStore: VersionedStore): FileSystem#File = versionedStore.root /+ version.toString / (shard + ".blob")
 
-  def indexFile(rootDir: FileSystem#Dir) = rootDir /+ catalog /+ database /+ version.toString / (shard + ".index")
+  def indexFile(versionedStore: VersionedStore): FileSystem#File = versionedStore.root /+ version.toString / (shard + ".index")
 
-  def shardFile(rootDir: FileSystem#Dir) = rootDir /+ catalog /+ database /+ version.toString / (shard + ".shard")
+  def shardFile(versionedStore: VersionedStore): FileSystem#File = versionedStore.root /+ version.toString / (shard + ".shard")
 }

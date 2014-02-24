@@ -205,18 +205,19 @@ abstract class Chomp extends SlapChop {
       }
 
       def copyShardFiles(basename: String, remoteVersionDir: FileSystem#Dir, localVersionDir: FileSystem#Dir) {
-        val blobFile = remoteVersionDir / (basename + ".blob")
+        val shard = DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
+
+        val blobFile = shard.blobFile(database.versionedStore)
         copy(blobFile, localVersionDir / blobFile.filename)
 
-        val indexFile = remoteVersionDir / (basename + ".index")
+        val indexFile = shard.indexFile(database.versionedStore)
         copy(indexFile, localVersionDir / indexFile.filename)
 
-        if ((localVersionDir / blobFile.filename).exists && (localVersionDir / indexFile.filename).exists) {
+        if (shard.blobFile(localDB(database).versionedStore).exists && shard.indexFile(localDB(database).versionedStore).exists) {
           Chomp.this.localDB(database).versionedStore.succeedShard(version, basename.toInt)
         }
 
         if (Chomp.this.localDB(database).versionedStore.shardMarker(version, basename.toInt).exists) {
-          val shard = DatabaseVersionShard(database.catalog.name, database.name, version, basename.toInt)
           addAvailableShard(shard)
         }
       }
