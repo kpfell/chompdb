@@ -2,6 +2,7 @@ package chompdb.integration
 
 import chompdb._
 import chompdb.server._
+import chompdb.util.{ ConsoleLogger, Logger }
 import f1lesystem._
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.Executors
@@ -45,6 +46,7 @@ object SmokeTest extends App {
   def server(index: Int, node: Node) = new DatabaseServer {
     override val params = SmokeTest.params
 
+    override val log: Logger = new ConsoleLogger
     override val databases: Seq[Database] = SmokeTest.params.databases map (_._1)
     override val localNode: Node = node
     override val nodes: Map[Node, Endpoint] = SmokeTest.nodes

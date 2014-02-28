@@ -3,6 +3,7 @@ package chompdb.server
 import chompdb._
 import chompdb.server._
 import chompdb.testing.TestUtils.createEmptyShard
+import chompdb.util.ConsoleLogger
 
 import f1lesystem.LocalFileSystem
 
@@ -45,6 +46,7 @@ class NodeProtocolTest extends WordSpec with ShouldMatchers {
   val chomps: Set[(Node, Chomp)] = allNodes
     .map { node =>
       node -> new Chomp {
+        override val log = new ConsoleLogger
         override val databases = Seq(db1)
         override val localNode = node
         override val nodes = allNodes map { n => (n, Endpoint("Endpoint" + n.id takeRight 1)) } toMap

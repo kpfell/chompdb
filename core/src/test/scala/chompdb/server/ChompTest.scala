@@ -3,6 +3,7 @@ package chompdb.server
 import chompdb._
 import chompdb.store._
 import chompdb.testing._
+import chompdb.util.ConsoleLogger
 import f1lesystem.{ FileSystem, LocalFileSystem }
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import java.io.IOException
@@ -43,6 +44,7 @@ class ChompTest extends WordSpec with ShouldMatchers {
     .thenReturn(Set((1L, 0), (2L, 0)))
 
   val chomp = new Chomp {
+    override val log = new ConsoleLogger
     override val databases = Seq(database1)
     override val localNode = Node("Node1")
     override val nodes = Map(

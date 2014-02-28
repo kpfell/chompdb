@@ -7,13 +7,13 @@ trait Logger {
   def error(message: String, t: Throwable): Unit
 }
 
-trait ConsoleLogger extends Logger {
+class ConsoleLogger extends Logger {
   override def debug(message: String) {
     Console.println("[DEBUG] " + message)
   }
 
   override def info(message: String) {
-    Console.println("[DEBUG] " + message)
+    Console.println("[INFO] " + message)
   }
 
   override def warn(message: String) {
