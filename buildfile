@@ -7,6 +7,7 @@ repositories.remote << "http://repo1.maven.org/maven2"
 F1LESYSTEM = "org.alexboisvert:f1lesystem-core:jar:0.0.2-SNAPSHOT"
 PIXII      = "pixii:pixii_2.10.0:jar:0.0.4-SNAPSHOT"
 AWS_SDK    = 'com.amazonaws:aws-java-sdk:jar:1.5.5'
+AKKA_ACTOR = "com.typesafe.akka:akka-actor_2.10:jar:2.3.0-RC4"
 
 desc "An embeddable distributed BLOB storage library"
 define "chompdb" do
@@ -15,7 +16,7 @@ define "chompdb" do
 
   desc "Core abstractions and implementation"
   define "core" do
-    compile.with F1LESYSTEM
+    compile.with F1LESYSTEM, AKKA_ACTOR
     package(:jar)
   end
 
